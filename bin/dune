@@ -1,0 +1,4 @@
+(executable
+ (public_name octet)
+ (name main)
+ (libraries octet))
