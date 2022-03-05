@@ -1,3 +1,9 @@
 (library
 (name obuffer)
+(modules obuffer)
 (libraries notty notty.unix))
+
+(library
+(name orender)
+(modules orender)
+(libraries notty notty.unix obuffer))
