@@ -1,4 +1,4 @@
 (executable
  (public_name octet)
  (name main)
- (libraries octet))
+ (libraries octet notty notty.unix obuffer))

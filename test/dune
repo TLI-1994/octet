@@ -1,2 +1,3 @@
 (test
- (name octet))
+ (name octet)
+ (libraries ounit2 obuffer))

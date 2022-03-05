@@ -1,0 +1,3 @@
+(library
+(name obuffer)
+(libraries notty notty.unix))
