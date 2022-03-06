@@ -12,6 +12,7 @@ let main =
     match Term.event t with
     | `Key (`Enter, _) -> ()
     | `Key (`ASCII ch, _) -> update t (Obuffer.insert_ascii state ch)
+    (* | `Key (`Arrow a, _) -> update t (Obuffer.move state a)*)
     | _ -> loop t state
   in
   let t = Term.create () in
