@@ -11,6 +11,8 @@ let insert_test
   assert_equal expected_output (insert_into_line input_line i c)
     ~printer:(fun x -> x)
 
+(** TODO: test Obuffer.insert_newline. *)
+
 let obuffer_tests =
   [
     insert_test "insert at start of string" "hello world" 0 'h'

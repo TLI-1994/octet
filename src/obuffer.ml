@@ -27,3 +27,35 @@ let insert_ascii t c =
     contents = insert_aux_tr t.cursor_line t.cursor_pos [] t.contents c;
     cursor_pos = t.cursor_pos + 1;
   }
+
+(** [break_line line pos] is the list containing two strings which are
+    [line] divided at [pos] with order preserved. Examples:
+
+    - [break_line "hello world" 5] is \["hello"; " world"\].
+    - [break_line "hello world" 0] is \[""; "hello world"\].
+    - [break_line "" 0] is \[""; ""\]. *)
+let break_line line pos =
+  let sub_str1 = String.sub line 0 pos in
+  let sub_str2 = String.sub line pos (String.length line - pos) in
+  [ sub_str1; sub_str2 ]
+
+let rec insert_newline_aux_tr
+    (line_number : int)
+    (pos : int)
+    (acc : string list)
+    (contents : string list) =
+  match contents with
+  | [] -> raise (Invalid_argument "contents cannot be empty list")
+  | h :: t -> (
+      match line_number with
+      | 0 -> acc @ break_line h pos @ t
+      | lines_left ->
+          insert_newline_aux_tr (lines_left - 1) pos (acc @ [ h ]) t)
+
+let insert_newline t =
+  {
+    cursor_line = t.cursor_line + 1;
+    cursor_pos = 0;
+    contents =
+      insert_newline_aux_tr t.cursor_line t.cursor_pos [] t.contents;
+  }
