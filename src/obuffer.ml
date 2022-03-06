@@ -35,6 +35,27 @@ let insert_ascii t c =
     cursor_pos = t.cursor_pos + 1;
   }
 
+let rec insert_aux cursor_line cursor_pos contents c acc =
+  match (cursor_line, contents) with
+  | 0, h :: t ->
+      (* insert c into line h *)
+      List.rev_append acc (insert_into_line h cursor_pos c :: t)
+  | 0, [] ->
+      (* insert c into new line*)
+      List.rev_append acc [ Char.escaped c ]
+  | lines_left, h :: t ->
+      (insert_aux [@tailcall]) (lines_left - 1) cursor_pos t c (h :: acc)
+  | _, [] -> raise (Invalid_argument "not enough lines to insert")
+
+let insert_ascii2 (buffer : t) c =
+  {
+    buffer with
+    contents =
+      insert_aux buffer.cursor_line buffer.cursor_pos buffer.contents c
+        [];
+    cursor_pos = buffer.cursor_pos + 1;
+  }
+
 (** [break_line line pos] is the list containing two strings which are
     [line] divided at [pos] with order preserved. Examples:
 
