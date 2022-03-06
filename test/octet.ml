@@ -8,15 +8,21 @@ let insert_test
     (c : char)
     (expected_output : string) : test =
   name >:: fun _ ->
-  assert_equal expected_output (insert_into_line input_line i c)
-    ~printer:(fun x -> x)
+  assert_equal expected_output
+    (insert_into_line input_line i c)
+    ~printer:String.escaped
 
 (** TODO: test Obuffer.insert_newline. *)
 
 let obuffer_tests =
   [
-    insert_test "insert at start of string" "hello world" 0 'h'
-      "hhello world";
+    insert_test "insert at start of string" "hello world" 0 'g'
+      "ghello world";
+    insert_test "insert into empty string" "" 0 'g' "g";
+    insert_test "insert into newline-terminated string" "hello world\n"
+      5 't' "hellot world\n";
+    insert_test "insert into end of newline-terminated string"
+      "hello world\n" 11 '!' "hello world!\n";
   ]
 
 let tests = "test suite for project" >::: List.flatten [ obuffer_tests ]

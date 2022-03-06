@@ -6,9 +6,16 @@ type t = {
 
 let empty : t = { cursor_line = 0; cursor_pos = 0; contents = [ "" ] }
 
+(** [insert_into_line line i c] is the first [i] characters of [line],
+    followed by [c], followed by the remainder of [line].
+
+    @raise [Invalid_argument] if [i > String.length line] *)
 let insert_into_line line i c =
-  String.sub line 0 i ^ Char.escaped c
-  ^ String.sub line i (String.length line - i)
+  try
+    String.sub line 0 i ^ Char.escaped c
+    ^ String.sub line i (String.length line - i)
+  with Invalid_argument _ ->
+    raise (Invalid_argument "invalid slice of input string")
 
 let rec insert_aux_tr cursor_line cursor_pos contents_hd contents_tl c =
   match cursor_line with

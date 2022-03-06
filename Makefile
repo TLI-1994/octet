@@ -7,7 +7,7 @@ utop:
 	OCAMLRUNPARAM=b dune utop src
 
 test:
-	OCAMLRUNPARAM=b dune test
+	OCAMLRUNPARAM=b dune exec test/octet.exe
 
 run:
 	OCAMLRUNPARAM=b dune exec bin/main.exe
