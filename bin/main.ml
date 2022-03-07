@@ -16,7 +16,7 @@ let main =
         | _ -> loop t state)
     | `Key (`Enter, _) -> update t (Obuffer.insert_newline state)
     | `Key (`Arrow direxn, _) ->
-        update t (Obuffer.mv_cursor_memless state direxn)
+        update t (Obuffer.mv_cursor state direxn)
     | `Key (`ASCII ch, _) ->
         update t (Obuffer.insert_ascii state ch)
         (* | `Key (`Arrow a, _) -> update t (Obuffer.move state a)*)

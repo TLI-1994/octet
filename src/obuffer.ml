@@ -100,41 +100,85 @@ let insert_newline t =
 
 let nth_line_len contents line = List.nth contents line |> String.length
 
-let rec mv_cursor_memless t direxn =
+(** [move_vertical buffer offset] is [buffer] with cursor moved
+    vertically by [offset].
+
+    Requires:
+
+    - [buffer.cursor_line] is not [0] if [offset] is [~-1]
+    - [buffer.cursor_line] is not [List.length buffer.contents - 1] if
+      [offset] is [1] . *)
+let move_vertical (buffer : t) (offset : int) =
+  let new_cursor_line = buffer.cursor_line + offset in
+  {
+    buffer with
+    cursor_line = new_cursor_line;
+    cursor_pos =
+      min buffer.cursor_pos_cache
+        (nth_line_len buffer.contents new_cursor_line);
+  }
+
+(** [move_horizontal buffer offset] is [buffer] with cursor moved
+    horizontally by [offset].
+
+    Requires:
+
+    - [0] < [buffer.cursor_pos] if [offset] is [~-1]
+    - [buffer.cursor_pos] < the length of [buffer.cursor_line]th line in
+      [buffer.contents] if [offset] is [1]. *)
+let move_horizontal (buffer : t) (offset : int) =
+  let new_cursor_pos = buffer.cursor_pos + offset in
+  {
+    buffer with
+    cursor_pos = new_cursor_pos;
+    cursor_pos_cache = new_cursor_pos;
+  }
+
+(** [cursor_jump buffer direxn] is [buffer] with cursor jumpping to
+
+    - the end of previous line if [direxn] is [`Left]
+    - the beginning of the next line if [direxn] is [`Right].
+
+    Requires:
+
+    - [0] < [buffer.cursor_line] if [direxn] is [`Left]
+    - [buffer.cursor_line] < [List.length buffer.contents - 1] if
+      [direxn] is [`Right]. *)
+let cursor_jump (buffer : t) direxn =
+  let new_cursor_line, new_cursor_pos =
+    match direxn with
+    | `Left ->
+        ( buffer.cursor_line - 1,
+          nth_line_len buffer.contents (buffer.cursor_line - 1) )
+    | `Right -> (buffer.cursor_line + 1, 0)
+  in
+  {
+    buffer with
+    cursor_line = new_cursor_line;
+    cursor_pos = new_cursor_pos;
+    cursor_pos_cache = new_cursor_pos;
+  }
+
+let mv_cursor (buffer : t) direxn =
   match direxn with
   | `Up ->
-      if t.cursor_line = 0 then t
-      else
-        let new_cursor_line = t.cursor_line - 1 in
-        {
-          t with
-          cursor_line = new_cursor_line;
-          cursor_pos =
-            nth_line_len t.contents new_cursor_line |> min t.cursor_pos;
-        }
+      if buffer.cursor_line = 0 then buffer
+      else move_vertical buffer ~-1
   | `Down ->
-      if t.cursor_line = List.length t.contents - 1 then t
-      else
-        let new_cursor_line = t.cursor_line + 1 in
-        {
-          t with
-          cursor_line = new_cursor_line;
-          cursor_pos =
-            nth_line_len t.contents new_cursor_line |> min t.cursor_pos;
-        }
+      if buffer.cursor_line = List.length buffer.contents - 1 then
+        buffer
+      else move_vertical buffer 1
   | `Left ->
-      if t.cursor_pos = 0 then
-        let t_up = mv_cursor_memless t `Up in
-        if t.cursor_line = 0 then t_up
-        else
-          {
-            t_up with
-            cursor_pos = nth_line_len t_up.contents t_up.cursor_line;
-          }
-      else { t with cursor_pos = t.cursor_pos - 1 }
+      if buffer.cursor_pos = 0 then
+        if buffer.cursor_line = 0 then buffer
+        else cursor_jump buffer `Left
+      else move_horizontal buffer ~-1
   | `Right ->
-      if t.cursor_pos = nth_line_len t.contents t.cursor_line then
-        let t_down = mv_cursor_memless t `Down in
-        if t.cursor_line = List.length t.contents - 1 then t_down
-        else { t_down with cursor_pos = 0 }
-      else { t with cursor_pos = t.cursor_pos + 1 }
+      if
+        buffer.cursor_pos
+        = nth_line_len buffer.contents buffer.cursor_line
+      then
+        if buffer.cursor_line = List.length buffer.contents - 1 then
+          buffer
+        else cursor_jump buffer `Right
+      else move_horizontal buffer 1
