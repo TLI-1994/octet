@@ -2,9 +2,16 @@ type t = {
   cursor_line : int;
   cursor_pos : int;
   contents : string list;
+  cursor_pos_cache : int;
 }
 
-let empty : t = { cursor_line = 0; cursor_pos = 0; contents = [ "" ] }
+let empty : t =
+  {
+    cursor_line = 0;
+    cursor_pos = 0;
+    contents = [ "" ];
+    cursor_pos_cache = 0;
+  }
 
 (** [insert_into_line line i c] is the first [i] characters of [line],
     followed by [c], followed by the remainder of [line].
@@ -33,6 +40,7 @@ let insert_ascii t c =
     t with
     contents = insert_aux_tr t.cursor_line t.cursor_pos [] t.contents c;
     cursor_pos = t.cursor_pos + 1;
+    cursor_pos_cache = t.cursor_pos + 1;
   }
 
 let rec insert_aux cursor_line cursor_pos contents c acc =
@@ -54,6 +62,7 @@ let insert_ascii2 (buffer : t) c =
       insert_aux buffer.cursor_line buffer.cursor_pos buffer.contents c
         [];
     cursor_pos = buffer.cursor_pos + 1;
+    cursor_pos_cache = buffer.cursor_pos + 1;
   }
 
 (** [break_line line pos] is the list containing two strings which are
@@ -86,6 +95,7 @@ let insert_newline t =
     cursor_pos = 0;
     contents =
       insert_newline_aux t.cursor_line t.cursor_pos [] t.contents;
+    cursor_pos_cache = 0;
   }
 
 let nth_line_len contents line = List.nth contents line |> String.length
