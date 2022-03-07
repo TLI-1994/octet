@@ -87,3 +87,44 @@ let insert_newline t =
     contents =
       insert_newline_aux t.cursor_line t.cursor_pos [] t.contents;
   }
+
+let nth_line_len contents line = List.nth contents line |> String.length
+
+let rec mv_cursor_memless t direxn =
+  match direxn with
+  | `Up ->
+      if t.cursor_line = 0 then t
+      else
+        let new_cursor_line = t.cursor_line - 1 in
+        {
+          t with
+          cursor_line = new_cursor_line;
+          cursor_pos =
+            nth_line_len t.contents new_cursor_line |> min t.cursor_pos;
+        }
+  | `Down ->
+      if t.cursor_line = List.length t.contents - 1 then t
+      else
+        let new_cursor_line = t.cursor_line + 1 in
+        {
+          t with
+          cursor_line = new_cursor_line;
+          cursor_pos =
+            nth_line_len t.contents new_cursor_line |> min t.cursor_pos;
+        }
+  | `Left ->
+      if t.cursor_pos = 0 then
+        let t_up = mv_cursor_memless t `Up in
+        if t.cursor_line = 0 then t_up
+        else
+          {
+            t_up with
+            cursor_pos = nth_line_len t_up.contents t_up.cursor_line;
+          }
+      else { t with cursor_pos = t.cursor_pos - 1 }
+  | `Right ->
+      if t.cursor_pos = nth_line_len t.contents t.cursor_line then
+        let t_down = mv_cursor_memless t `Down in
+        if t.cursor_line = List.length t.contents - 1 then t_down
+        else { t_down with cursor_pos = 0 }
+      else { t with cursor_pos = t.cursor_pos + 1 }
