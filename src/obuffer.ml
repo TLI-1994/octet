@@ -67,23 +67,23 @@ let break_line line pos =
   let sub_str2 = String.sub line pos (String.length line - pos) in
   [ sub_str1; sub_str2 ]
 
-let rec insert_newline_aux_tr
+let rec insert_newline_aux
     (line_number : int)
     (pos : int)
     (acc : string list)
     (contents : string list) =
-  match contents with
-  | [] -> raise (Invalid_argument "contents cannot be empty list")
-  | h :: t -> (
-      match line_number with
-      | 0 -> acc @ break_line h pos @ t
-      | lines_left ->
-          insert_newline_aux_tr (lines_left - 1) pos (acc @ [ h ]) t)
+  match (line_number, contents) with
+  | 0, h :: t ->
+      let line_split = break_line h pos in
+      List.rev_append (List.rev_append line_split acc) t
+  | lines_left, h :: t ->
+      (insert_newline_aux [@tailcall]) (lines_left - 1) pos (h :: acc) t
+  | _, [] -> raise (Invalid_argument "contents cannot be empty list")
 
 let insert_newline t =
   {
     cursor_line = t.cursor_line + 1;
     cursor_pos = 0;
     contents =
-      insert_newline_aux_tr t.cursor_line t.cursor_pos [] t.contents;
+      insert_newline_aux t.cursor_line t.cursor_pos [] t.contents;
   }
