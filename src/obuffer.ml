@@ -182,3 +182,39 @@ let mv_cursor (buffer : t) direxn =
           buffer
         else cursor_jump buffer `Right
       else move_horizontal buffer 1
+
+(** [delete_from_line line i] is [line] with the [i]th character
+    removed.
+
+    Raises: [Invalid_argument] if [i >= String.length line] *)
+let delete_from_line line i =
+  String.sub line 0 i
+  ^ String.sub line (i + 1) (String.length line - i - 1)
+
+let rec delete_aux
+    (line_number : int)
+    (pos : int)
+    (acc : string list)
+    (contents : string list) =
+  match (line_number, contents) with
+  | 0, h :: t ->
+      if pos = 0 then
+        match acc with
+        (* cursor is at the beginning of the first line. *)
+        | [] -> contents
+        (* cursor is at the beginning of some other line. *)
+        | ah :: at -> List.rev_append ((ah ^ h) :: at) t
+      else List.rev_append (delete_from_line h (pos - 1) :: acc) t
+  | lines_left, h :: t ->
+      (delete_aux [@tailcall]) (lines_left - 1) pos (h :: acc) t
+  | _, [] -> raise (Invalid_argument "contents cannot be empty list")
+
+let delete (buffer : t) =
+  let nb = mv_cursor buffer `Left in
+  {
+    cursor_line = nb.cursor_line;
+    cursor_pos = nb.cursor_pos;
+    contents =
+      delete_aux buffer.cursor_line buffer.cursor_pos [] buffer.contents;
+    cursor_pos_cache = nb.cursor_pos_cache;
+  }

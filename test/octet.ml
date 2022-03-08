@@ -12,7 +12,11 @@ let insert_test
     (insert_into_line input_line i c)
     ~printer:String.escaped
 
-(** TODO: test Obuffer.insert_newline. *)
+(** TODO: test Obuffer.break_line. *)
+
+(** TODO: test Obuffer.nth_line_len. *)
+
+(** TODO: test Obuffer.delete_from_line. *)
 
 let obuffer_tests =
   [
