@@ -218,3 +218,43 @@ let delete (buffer : t) =
       delete_aux buffer.cursor_line buffer.cursor_pos [] buffer.contents;
     cursor_pos_cache = nb.cursor_pos_cache;
   }
+
+let rec list_from_nth lst = function
+  | 0 -> lst
+  | n -> list_from_nth (List.tl lst) @@ (n - 1)
+
+let wrap2 width img =
+  let rec go off =
+    Notty.I.hcrop off 0 img
+    ::
+    (if Notty.I.width img - off > width then go (off + width) else [])
+  in
+  go 0 |> Notty.I.vcat |> Notty.I.hsnap ~align:`Left width
+
+let cursor_icon = "*"
+
+let cursor_image width =
+  Notty.I.( <|> ) (Notty.I.void width 1)
+    (Notty.I.string Notty.A.empty cursor_icon)
+
+let to_image
+    (buffer : t)
+    (top_line : int)
+    ((height, width) : int * int)
+    (show_cursor : bool) =
+  let remaining = list_from_nth buffer.contents top_line in
+  let superimposed =
+    List.mapi
+      (fun i elt ->
+        if i = buffer.cursor_line - top_line && show_cursor then
+          Notty.I.( </> )
+            (cursor_image buffer.cursor_pos)
+            (Notty.I.string Notty.A.empty elt)
+        else Notty.I.string Notty.A.empty elt)
+      remaining
+  in
+  let widthcropped = wrap2 width (Notty.I.vcat superimposed) in
+  let heightcropped =
+    Notty.I.vcrop 0 (List.length remaining - height) widthcropped
+  in
+  heightcropped
