@@ -100,9 +100,20 @@ let insert_newline t =
 
 let nth_line_len contents line = List.nth contents line |> String.length
 
+<<<<<<< HEAD
 (** [move_vertical buffer offset] is buffer with cursor moved vertically
     by [offset]. Requires: [buffer.cursor_line] cannot be either 0 or
     [List.length buffer.contents - 1]. *)
+=======
+(** [move_vertical buffer offset] is [buffer] with cursor moved
+    vertically by [offset].
+
+    Requires:
+
+    - [buffer.cursor_line] is not [0] if [offset] is [~-1]
+    - [buffer.cursor_line] is not [List.length buffer.contents - 1] if
+      [offset] is [1] . *)
+>>>>>>> 00aeccb5e4f70bee17f6e0c4ac8f3054f0b8f5b0
 let move_vertical (buffer : t) (offset : int) =
   let new_cursor_line = buffer.cursor_line + offset in
   {
@@ -113,10 +124,21 @@ let move_vertical (buffer : t) (offset : int) =
         (nth_line_len buffer.contents new_cursor_line);
   }
 
+<<<<<<< HEAD
 (** [move_horizontal buffer offset] is buffer with cursor moved
     horizontally by [offset]. Requires: [buffer.cursor_pos] cannot be
     either 0 or the length of [buffer.cursor_line]th element in
     [buffer.contents]. *)
+=======
+(** [move_horizontal buffer offset] is [buffer] with cursor moved
+    horizontally by [offset].
+
+    Requires:
+
+    - [0] < [buffer.cursor_pos] if [offset] is [~-1]
+    - [buffer.cursor_pos] < the length of [buffer.cursor_line]th line in
+      [buffer.contents] if [offset] is [1]. *)
+>>>>>>> 00aeccb5e4f70bee17f6e0c4ac8f3054f0b8f5b0
 let move_horizontal (buffer : t) (offset : int) =
   let new_cursor_pos = buffer.cursor_pos + offset in
   {
@@ -125,7 +147,32 @@ let move_horizontal (buffer : t) (offset : int) =
     cursor_pos_cache = new_cursor_pos;
   }
 
-let rec mv_cursor buffer direxn =
+(** [cursor_jump buffer direxn] is [buffer] with cursor jumpping to
+
+    - the end of previous line if [direxn] is [`Left]
+    - the beginning of the next line if [direxn] is [`Right].
+
+    Requires:
+
+    - [0] < [buffer.cursor_line] if [direxn] is [`Left]
+    - [buffer.cursor_line] < [List.length buffer.contents - 1] if
+      [direxn] is [`Right]. *)
+let cursor_jump (buffer : t) direxn =
+  let new_cursor_line, new_cursor_pos =
+    match direxn with
+    | `Left ->
+        ( buffer.cursor_line - 1,
+          nth_line_len buffer.contents (buffer.cursor_line - 1) )
+    | `Right -> (buffer.cursor_line + 1, 0)
+  in
+  {
+    buffer with
+    cursor_line = new_cursor_line;
+    cursor_pos = new_cursor_pos;
+    cursor_pos_cache = new_cursor_pos;
+  }
+
+let mv_cursor (buffer : t) direxn =
   match direxn with
   | `Up ->
       if buffer.cursor_line = 0 then buffer
@@ -136,25 +183,51 @@ let rec mv_cursor buffer direxn =
       else move_vertical buffer 1
   | `Left ->
       if buffer.cursor_pos = 0 then
-        let t_up = mv_cursor buffer `Up in
-        if buffer.cursor_line = 0 then t_up
-        else
-          let new_cursur_pos =
-            nth_line_len t_up.contents t_up.cursor_line
-          in
-          {
-            t_up with
-            cursor_pos = new_cursur_pos;
-            cursor_pos_cache = new_cursur_pos;
-          }
+        if buffer.cursor_line = 0 then buffer
+        else cursor_jump buffer `Left
       else move_horizontal buffer ~-1
   | `Right ->
       if
         buffer.cursor_pos
         = nth_line_len buffer.contents buffer.cursor_line
       then
-        let t_down = mv_cursor buffer `Down in
         if buffer.cursor_line = List.length buffer.contents - 1 then
-          t_down
-        else { t_down with cursor_pos = 0; cursor_pos_cache = 0 }
+          buffer
+        else cursor_jump buffer `Right
       else move_horizontal buffer 1
+
+(** [delete_from_line line i] is [line] with the [i]th character
+    removed.
+
+    Raises: [Invalid_argument] if [i >= String.length line] *)
+let delete_from_line line i =
+  String.sub line 0 i
+  ^ String.sub line (i + 1) (String.length line - i - 1)
+
+let rec delete_aux
+    (line_number : int)
+    (pos : int)
+    (acc : string list)
+    (contents : string list) =
+  match (line_number, contents) with
+  | 0, h :: t ->
+      if pos = 0 then
+        match acc with
+        (* cursor is at the beginning of the first line. *)
+        | [] -> contents
+        (* cursor is at the beginning of some other line. *)
+        | ah :: at -> List.rev_append ((ah ^ h) :: at) t
+      else List.rev_append (delete_from_line h (pos - 1) :: acc) t
+  | lines_left, h :: t ->
+      (delete_aux [@tailcall]) (lines_left - 1) pos (h :: acc) t
+  | _, [] -> raise (Invalid_argument "contents cannot be empty list")
+
+let delete (buffer : t) =
+  let nb = mv_cursor buffer `Left in
+  {
+    cursor_line = nb.cursor_line;
+    cursor_pos = nb.cursor_pos;
+    contents =
+      delete_aux buffer.cursor_line buffer.cursor_pos [] buffer.contents;
+    cursor_pos_cache = nb.cursor_pos_cache;
+  }
