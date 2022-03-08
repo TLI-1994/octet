@@ -100,11 +100,6 @@ let insert_newline t =
 
 let nth_line_len contents line = List.nth contents line |> String.length
 
-<<<<<<< HEAD
-(** [move_vertical buffer offset] is buffer with cursor moved vertically
-    by [offset]. Requires: [buffer.cursor_line] cannot be either 0 or
-    [List.length buffer.contents - 1]. *)
-=======
 (** [move_vertical buffer offset] is [buffer] with cursor moved
     vertically by [offset].
 
@@ -113,7 +108,6 @@ let nth_line_len contents line = List.nth contents line |> String.length
     - [buffer.cursor_line] is not [0] if [offset] is [~-1]
     - [buffer.cursor_line] is not [List.length buffer.contents - 1] if
       [offset] is [1] . *)
->>>>>>> 00aeccb5e4f70bee17f6e0c4ac8f3054f0b8f5b0
 let move_vertical (buffer : t) (offset : int) =
   let new_cursor_line = buffer.cursor_line + offset in
   {
@@ -124,12 +118,6 @@ let move_vertical (buffer : t) (offset : int) =
         (nth_line_len buffer.contents new_cursor_line);
   }
 
-<<<<<<< HEAD
-(** [move_horizontal buffer offset] is buffer with cursor moved
-    horizontally by [offset]. Requires: [buffer.cursor_pos] cannot be
-    either 0 or the length of [buffer.cursor_line]th element in
-    [buffer.contents]. *)
-=======
 (** [move_horizontal buffer offset] is [buffer] with cursor moved
     horizontally by [offset].
 
@@ -138,7 +126,6 @@ let move_vertical (buffer : t) (offset : int) =
     - [0] < [buffer.cursor_pos] if [offset] is [~-1]
     - [buffer.cursor_pos] < the length of [buffer.cursor_line]th line in
       [buffer.contents] if [offset] is [1]. *)
->>>>>>> 00aeccb5e4f70bee17f6e0c4ac8f3054f0b8f5b0
 let move_horizontal (buffer : t) (offset : int) =
   let new_cursor_pos = buffer.cursor_pos + offset in
   {
