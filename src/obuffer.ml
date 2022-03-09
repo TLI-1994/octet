@@ -13,6 +13,16 @@ let empty : t =
     cursor_pos_cache = 0;
   }
 
+let from_string = raise (Failure "Unimplemented:Obuffer.from_string")
+
+let update_on_key =
+  raise (Failure "Unimplemented:Obuffer.update_on_key")
+
+let to_image = raise (Failure "Unimplemented:Obuffer.to_image")
+
+(* TODO: deleted this function when appropriate. *)
+let buffer_contents buffer = buffer.contents
+
 (** [insert_into_line line i c] is the first [i] characters of [line],
     followed by [c], followed by the remainder of [line].
 
