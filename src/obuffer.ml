@@ -257,4 +257,4 @@ let to_image
   let heightcropped =
     Notty.I.vcrop 0 (List.length remaining - height) widthcropped
   in
-  heightcropped
+  Notty.I.( </> ) heightcropped @@ Notty.I.void height width
