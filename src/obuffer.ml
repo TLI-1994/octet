@@ -16,29 +16,15 @@ let empty : t =
 let from_string s =
   { empty with contents = String.split_on_char '\n' s }
 
-let to_image = raise (Failure "Unimplemented:Obuffer.to_image")
+let to_image
+    (buffer : t)
+    (top_line : int)
+    ((h, w) : int * int)
+    (show_cursor : bool) : Notty.I.t =
+  raise (Failure "Unimplemented:Obuffer.to_image")
 
 (* TODO: deleted this function when appropriate. *)
 let buffer_contents buffer = buffer.contents
-
-let rec insert_aux_tr cursor_line cursor_pos contents_hd contents_tl c =
-  match cursor_line with
-  | 0 ->
-      contents_hd
-      @ Util.insert_at_n (List.hd contents_tl) cursor_pos c
-        :: List.tl contents_tl
-  | lines_left ->
-      insert_aux_tr (lines_left - 1) cursor_pos
-        (contents_hd @ [ List.hd contents_tl ])
-        (List.tl contents_tl) c
-
-let insert_ascii t c =
-  {
-    t with
-    contents = insert_aux_tr t.cursor_line t.cursor_pos [] t.contents c;
-    cursor_pos = t.cursor_pos + 1;
-    cursor_pos_cache = t.cursor_pos + 1;
-  }
 
 let rec insert_aux cursor_line cursor_pos contents c acc =
   match (cursor_line, contents) with
@@ -52,7 +38,7 @@ let rec insert_aux cursor_line cursor_pos contents c acc =
       (insert_aux [@tailcall]) (lines_left - 1) cursor_pos t c (h :: acc)
   | _, [] -> raise (Invalid_argument "not enough lines to insert")
 
-let insert_ascii2 (buffer : t) c =
+let insert_ascii (buffer : t) c =
   {
     buffer with
     contents =

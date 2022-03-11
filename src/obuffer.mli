@@ -21,5 +21,3 @@ val buffer_contents : t -> string list
 (** [buffer_contents buffer] is the contents of [buffer]. *)
 (*TODO: remove this function when the implementation of to_image is
   complete.*)
-
-val insert_ascii2 : t -> char -> t
