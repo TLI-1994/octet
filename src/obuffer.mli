@@ -27,6 +27,5 @@ val insert_newline : t -> t
 val mv_cursor : t -> [ `Down | `Left | `Right | `Up ] -> t
 val insert_ascii : t -> char -> t
 val insert_ascii2 : t -> char -> t
-val insert_into_line : string -> int -> char -> string
 (*TODO: remove these functions when the implementation of
   handle_keystroke is complete.*)

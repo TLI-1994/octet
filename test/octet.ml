@@ -1,5 +1,4 @@
 open OUnit2
-open Obuffer
 
 let insert_test
     (name : string)
@@ -7,9 +6,10 @@ let insert_test
     (i : int)
     (c : char)
     (expected_output : string) : test =
+  let open Util in
   name >:: fun _ ->
   assert_equal expected_output
-    (insert_into_line input_line i c)
+    (insert_at_n input_line i c)
     ~printer:String.escaped
 
 (** TODO: test Obuffer.break_line. *)

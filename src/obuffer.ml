@@ -23,22 +23,11 @@ let to_image = raise (Failure "Unimplemented:Obuffer.to_image")
 (* TODO: deleted this function when appropriate. *)
 let buffer_contents buffer = buffer.contents
 
-(** [insert_into_line line i c] is the first [i] characters of [line],
-    followed by [c], followed by the remainder of [line].
-
-    @raise [Invalid_argument] if [i > String.length line] *)
-let insert_into_line line i c =
-  try
-    String.sub line 0 i ^ Char.escaped c
-    ^ String.sub line i (String.length line - i)
-  with Invalid_argument _ ->
-    raise (Invalid_argument "invalid slice of input string")
-
 let rec insert_aux_tr cursor_line cursor_pos contents_hd contents_tl c =
   match cursor_line with
   | 0 ->
       contents_hd
-      @ insert_into_line (List.hd contents_tl) cursor_pos c
+      @ Util.insert_at_n (List.hd contents_tl) cursor_pos c
         :: List.tl contents_tl
   | lines_left ->
       insert_aux_tr (lines_left - 1) cursor_pos
@@ -57,7 +46,7 @@ let rec insert_aux cursor_line cursor_pos contents c acc =
   match (cursor_line, contents) with
   | 0, h :: t ->
       (* insert c into line h *)
-      List.rev_append acc (insert_into_line h cursor_pos c :: t)
+      List.rev_append acc (Util.insert_at_n h cursor_pos c :: t)
   | 0, [] ->
       (* insert c into new line*)
       List.rev_append acc [ Char.escaped c ]
@@ -75,17 +64,6 @@ let insert_ascii2 (buffer : t) c =
     cursor_pos_cache = buffer.cursor_pos + 1;
   }
 
-(** [break_line line pos] is the list containing two strings which are
-    [line] divided at [pos] with order preserved. Examples:
-
-    - [break_line "hello world" 5] is \["hello"; " world"\].
-    - [break_line "hello world" 0] is \[""; "hello world"\].
-    - [break_line "" 0] is \[""; ""\]. *)
-let break_line line pos =
-  let sub_str1 = String.sub line 0 pos in
-  let sub_str2 = String.sub line pos (String.length line - pos) in
-  [ sub_str1; sub_str2 ]
-
 let rec insert_newline_aux
     (line_number : int)
     (pos : int)
@@ -93,7 +71,7 @@ let rec insert_newline_aux
     (contents : string list) =
   match (line_number, contents) with
   | 0, h :: t ->
-      let line_split = break_line h pos in
+      let line_split = Util.split_at_n h pos in
       List.rev_append (List.rev_append line_split acc) t
   | lines_left, h :: t ->
       (insert_newline_aux [@tailcall]) (lines_left - 1) pos (h :: acc) t
@@ -107,8 +85,6 @@ let insert_newline t =
       insert_newline_aux t.cursor_line t.cursor_pos [] t.contents;
     cursor_pos_cache = 0;
   }
-
-let nth_line_len contents line = List.nth contents line |> String.length
 
 (** [move_vertical buffer offset] is [buffer] with cursor moved
     vertically by [offset].
@@ -125,7 +101,7 @@ let move_vertical (buffer : t) (offset : int) =
     cursor_line = new_cursor_line;
     cursor_pos =
       min buffer.cursor_pos_cache
-        (nth_line_len buffer.contents new_cursor_line);
+        (Util.length_of_nth buffer.contents new_cursor_line);
   }
 
 (** [move_horizontal buffer offset] is [buffer] with cursor moved
@@ -159,7 +135,7 @@ let cursor_jump (buffer : t) direxn =
     match direxn with
     | `Left ->
         ( buffer.cursor_line - 1,
-          nth_line_len buffer.contents (buffer.cursor_line - 1) )
+          Util.length_of_nth buffer.contents (buffer.cursor_line - 1) )
     | `Right -> (buffer.cursor_line + 1, 0)
   in
   {
@@ -186,20 +162,12 @@ let mv_cursor (buffer : t) direxn =
   | `Right ->
       if
         buffer.cursor_pos
-        = nth_line_len buffer.contents buffer.cursor_line
+        = Util.length_of_nth buffer.contents buffer.cursor_line
       then
         if buffer.cursor_line = List.length buffer.contents - 1 then
           buffer
         else cursor_jump buffer `Right
       else move_horizontal buffer 1
-
-(** [delete_from_line line i] is [line] with the [i]th character
-    removed.
-
-    Raises: [Invalid_argument] if [i >= String.length line] *)
-let delete_from_line line i =
-  String.sub line 0 i
-  ^ String.sub line (i + 1) (String.length line - i - 1)
 
 let rec delete_aux
     (line_number : int)
@@ -214,7 +182,7 @@ let rec delete_aux
         | [] -> contents
         (* cursor is at the beginning of some other line. *)
         | ah :: at -> List.rev_append ((ah ^ h) :: at) t
-      else List.rev_append (delete_from_line h (pos - 1) :: acc) t
+      else List.rev_append (Util.delete_nth h (pos - 1) :: acc) t
   | lines_left, h :: t ->
       (delete_aux [@tailcall]) (lines_left - 1) pos (h :: acc) t
   | _, [] -> raise (Invalid_argument "contents cannot be empty list")
