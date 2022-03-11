@@ -14,13 +14,7 @@ let main =
         match Term.event t with
         | `Key (`ASCII 'C', [ `Ctrl ]) -> ()
         | _ -> loop t state)
-    | `Key (`Backspace, _) -> update t (Obuffer.delete state)
-    | `Key (`Enter, _) -> update t (Obuffer.insert_newline state)
-    | `Key (`Arrow direxn, _) ->
-        update t (Obuffer.mv_cursor state direxn)
-    | `Key (`ASCII ch, _) ->
-        update t (Obuffer.insert_ascii state ch)
-        (* | `Key (`Arrow a, _) -> update t (Obuffer.move state a)*)
+    | `Key key -> update t (Obuffer.update_on_key state key)
     | _ -> loop t state
   in
   let t = Term.create () in

@@ -6,7 +6,7 @@ val empty : t
 val from_string : string -> t
 (** [from_string s] is a buffer containing [s]. *)
 
-val update_on_key : t -> [ `Key of Notty.Unescape.key ] -> t
+val update_on_key : t -> Notty.Unescape.key -> t
 (** [handle_keystroke buffer key] is [buffer] updated according to the
     signal sent by [key]. *)
 
@@ -22,10 +22,4 @@ val buffer_contents : t -> string list
 (*TODO: remove this function when the implementation of to_image is
   complete.*)
 
-val delete : t -> t
-val insert_newline : t -> t
-val mv_cursor : t -> [ `Down | `Left | `Right | `Up ] -> t
-val insert_ascii : t -> char -> t
 val insert_ascii2 : t -> char -> t
-(*TODO: remove these functions when the implementation of
-  handle_keystroke is complete.*)

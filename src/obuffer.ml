@@ -13,10 +13,8 @@ let empty : t =
     cursor_pos_cache = 0;
   }
 
-let from_string = raise (Failure "Unimplemented:Obuffer.from_string")
-
-let update_on_key =
-  raise (Failure "Unimplemented:Obuffer.update_on_key")
+let from_string s =
+  { empty with contents = String.split_on_char '\n' s }
 
 let to_image = raise (Failure "Unimplemented:Obuffer.to_image")
 
@@ -196,3 +194,11 @@ let delete (buffer : t) =
       delete_aux buffer.cursor_line buffer.cursor_pos [] buffer.contents;
     cursor_pos_cache = nb.cursor_pos_cache;
   }
+
+let update_on_key (buffer : t) (key : Notty.Unescape.key) =
+  match key with
+  | `Enter, _ -> insert_newline buffer
+  | `ASCII ch, _ -> insert_ascii buffer ch
+  | `Backspace, _ | `Delete, _ -> delete buffer
+  | `Arrow direxn, _ -> mv_cursor buffer direxn
+  | _ -> buffer
