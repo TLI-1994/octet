@@ -2,12 +2,12 @@
 open Notty_unix
 
 let init = Obuffer.empty
-let img = Orender.image_of_buffer
-let img2 buffer t = Obuffer.to_image buffer 0 (Term.size t) true
+let img _ = Orender.image_of_buffer
+let img2 t buffer = Obuffer.to_image buffer 0 (Term.size t) true
 
 let main =
   let rec update t state =
-    Term.image t (img2 state t);
+    Term.image t (img2 t state);
     loop t state
   and loop t state =
     match Term.event t with

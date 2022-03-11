@@ -253,7 +253,9 @@ let to_image
         else Notty.I.string Notty.A.empty elt)
       remaining
   in
-  let widthcropped = wrap2 width (Notty.I.vcat superimposed) in
+  let widthcropped =
+    Notty.I.vcat (List.map (wrap2 width) superimposed)
+  in
   let heightcropped =
     Notty.I.vcrop 0 (List.length remaining - height) widthcropped
   in
