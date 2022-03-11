@@ -240,7 +240,7 @@ let cursor_image width =
 let to_image
     (buffer : t)
     (top_line : int)
-    ((height, width) : int * int)
+    ((width, height) : int * int)
     (show_cursor : bool) =
   let remaining = list_from_nth buffer.contents top_line in
   let superimposed =
