@@ -13,8 +13,8 @@ val update_on_key : t -> Notty.Unescape.key -> t
 val to_image : t -> int -> int * int -> bool -> Notty.I.t
 (** [to_image buffer top_line (h, w) show_cursor] is the image of
     [buffer] starting from [top_line], wrapped by width [w], cropped to
-    height of [h] with cursor shown if [show_cursor] and with cursor not
-    showing if not [show_cursor]. *)
+    height of [h] with cursor if [show_cursor] and without cursor if not
+    [show_cursor]. *)
 (* TODO: simplify this function. *)
 
 val buffer_contents : t -> string list
