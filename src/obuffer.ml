@@ -174,7 +174,9 @@ let delete (buffer : t) =
     cursor_pos_cache = nb.cursor_pos_cache;
   }
 
-let update_on_key (buffer : t) (key : Notty.Unescape.key) =
+open Notty
+
+let update_on_key (buffer : t) (key : Unescape.key) =
   match key with
   | `Enter, _ -> insert_newline buffer
   | `ASCII ch, _ -> insert_ascii buffer ch
@@ -188,17 +190,15 @@ let rec list_from_nth lst = function
 
 let wrap2 width img =
   let rec go off =
-    Notty.I.hcrop off 0 img
-    ::
-    (if Notty.I.width img - off > width then go (off + width) else [])
+    I.hcrop off 0 img
+    :: (if I.width img - off > width then go (off + width) else [])
   in
-  go 0 |> Notty.I.vcat |> Notty.I.hsnap ~align:`Left width
+  go 0 |> I.vcat |> I.hsnap ~align:`Left width
 
 let cursor_icon = " "
 
 let cursor_image width =
-  Notty.I.( <|> ) (Notty.I.void width 1)
-    (Notty.I.string Notty.A.(bg lightblack) cursor_icon)
+  I.( <|> ) (I.void width 1) (I.string A.(bg lightblack) cursor_icon)
 
 let to_image
     (buffer : t)
@@ -210,16 +210,14 @@ let to_image
     List.mapi
       (fun i elt ->
         if i = buffer.cursor_line - top_line && show_cursor then
-          Notty.I.( </> )
+          I.( </> )
             (cursor_image buffer.cursor_pos)
-            (Notty.I.string Notty.A.empty elt)
-        else Notty.I.string Notty.A.empty elt)
+            (I.string A.empty elt)
+        else I.string A.empty elt)
       remaining
   in
-  let widthcropped =
-    Notty.I.vcat (List.map (wrap2 width) superimposed)
-  in
+  let widthcropped = I.vcat (List.map (wrap2 width) superimposed) in
   let heightcropped =
-    Notty.I.vcrop 0 (List.length remaining - height) widthcropped
+    I.vcrop 0 (List.length remaining - height) widthcropped
   in
-  Notty.I.( </> ) heightcropped @@ Notty.I.void height width
+  I.( </> ) heightcropped @@ I.void height width
