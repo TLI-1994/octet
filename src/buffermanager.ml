@@ -1,15 +1,25 @@
 open Notty
-(* open Notty_unix *)
 
-type buffer_params = { location : [ `Left | `Right | `Bottom ] }
-type t = { buffers : Obuffer.t list }
+(* type buffer_params = { location : [ `Left | `Right | `Bottom ] } *)
+(* type t = { buffers : Obuffer.t list } *)
 
-let empty : t = { buffers = [] }
+type t =
+  | Hsplit of t * t
+  | Vsplit of t * t
+  | Leaf of Obuffer.t
 
-let to_image bm =
-  List.map (fun (b : Obuffer.t) -> b.contents) bm.buffers
-  |> List.flatten (* only works for vertically concatenating buffers *)
-  |> List.map (I.string A.empty)
-  |> I.vcat
+let init (b : Obuffer.t) = Leaf b
+let ( <-> ) bm1 bm2 = Hsplit (bm1, bm2)
+let ( <|> ) bm1 bm2 = Vsplit (bm1, bm2)
+let to_image_one (_ : Obuffer.t) (_ : int * int) (_ : bool) = I.empty
 
-let add_buffer bm buf = { buffers = buf :: bm.buffers }
+let rec to_image (dim : int * int) =
+  let open Notty.Infix in
+  function
+  | Hsplit (t1, t2) ->
+      to_image (fst dim, snd dim / 2) t1
+      <-> to_image (fst dim, snd dim / 2) t2
+  | Vsplit (t1, t2) ->
+      to_image (fst dim / 2, snd dim) t1
+      <|> to_image (fst dim / 2, snd dim) t2
+  | Leaf b -> to_image_one b dim false

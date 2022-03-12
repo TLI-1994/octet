@@ -1,16 +1,14 @@
 type t
 (** representation type of the buffer manager *)
 
-val empty : t
+val init : Obuffer.t -> t
+(** initialize a buffermanager with a single buffer *)
 
-type buffer_params = {
-  location : [ `Left | `Right | `Bottom ];
-  size : int * int;
-}
-(** paramters for inserting buffer *)
+val ( <-> ) : t -> t -> t
+(** vertically stack buffers *)
 
-val add_buffer : t -> Obuffer.t -> t
-(** add buffer to this manager *)
+val ( <|> ) : t -> t -> t
+(*** horizontally stack buffers *)
 
-val to_image : t -> Notty.image
+val to_image : int * int -> t -> Notty.image
 (** convert to image *)
