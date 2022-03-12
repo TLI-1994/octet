@@ -16,3 +16,7 @@ clean:
 	dune clean
 doc:
 	dune build @doc
+
+cloc:
+	ocamlbuild -clean
+	cloc --by-file --include-lang=OCaml .
