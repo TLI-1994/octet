@@ -194,11 +194,11 @@ let wrap2 width img =
   in
   go 0 |> Notty.I.vcat |> Notty.I.hsnap ~align:`Left width
 
-let cursor_icon = "*"
+let cursor_icon = " "
 
 let cursor_image width =
   Notty.I.( <|> ) (Notty.I.void width 1)
-    (Notty.I.string Notty.A.empty cursor_icon)
+    (Notty.I.string Notty.A.(bg lightblack) cursor_icon)
 
 let to_image
     (buffer : t)
