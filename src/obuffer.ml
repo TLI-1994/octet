@@ -197,8 +197,10 @@ let wrap2 width img =
 
 let cursor_icon = " "
 
+open Notty.Infix
+
 let cursor_image width =
-  I.( <|> ) (I.void width 1) (I.string A.(bg lightblack) cursor_icon)
+  I.void width 1 <|> I.string A.(bg lightblack) cursor_icon
 
 let to_image
     (buffer : t)
@@ -210,9 +212,7 @@ let to_image
     List.mapi
       (fun i elt ->
         if i = buffer.cursor_line - top_line && show_cursor then
-          I.( </> )
-            (cursor_image buffer.cursor_pos)
-            (I.string A.empty elt)
+          cursor_image buffer.cursor_pos </> I.string A.empty elt
         else I.string A.empty elt)
       remaining
   in
@@ -220,4 +220,4 @@ let to_image
   let heightcropped =
     I.vcrop 0 (List.length remaining - height) widthcropped
   in
-  I.( </> ) heightcropped @@ I.void height width
+  heightcropped </> I.void height width
