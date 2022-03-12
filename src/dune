@@ -14,4 +14,5 @@
 
 (library
  (name buffermanager)
- (modules buffermanager obuffer))
+ (modules buffermanager)
+ (libraries notty notty.unix obuffer))
