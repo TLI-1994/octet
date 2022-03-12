@@ -16,13 +16,6 @@ let empty : t =
 let from_string s =
   { empty with contents = String.split_on_char '\n' s }
 
-let to_image
-    (buffer : t)
-    (top_line : int)
-    ((h, w) : int * int)
-    (show_cursor : bool) : Notty.I.t =
-  raise (Failure "Unimplemented:Obuffer.to_image")
-
 (* TODO: deleted this function when appropriate. *)
 let buffer_contents buffer = buffer.contents
 
@@ -188,3 +181,45 @@ let update_on_key (buffer : t) (key : Notty.Unescape.key) =
   | `Backspace, _ | `Delete, _ -> delete buffer
   | `Arrow direxn, _ -> mv_cursor buffer direxn
   | _ -> buffer
+
+let rec list_from_nth lst = function
+  | 0 -> lst
+  | n -> list_from_nth (List.tl lst) @@ (n - 1)
+
+let wrap2 width img =
+  let rec go off =
+    Notty.I.hcrop off 0 img
+    ::
+    (if Notty.I.width img - off > width then go (off + width) else [])
+  in
+  go 0 |> Notty.I.vcat |> Notty.I.hsnap ~align:`Left width
+
+let cursor_icon = "*"
+
+let cursor_image width =
+  Notty.I.( <|> ) (Notty.I.void width 1)
+    (Notty.I.string Notty.A.empty cursor_icon)
+
+let to_image
+    (buffer : t)
+    (top_line : int)
+    ((width, height) : int * int)
+    (show_cursor : bool) =
+  let remaining = list_from_nth buffer.contents top_line in
+  let superimposed =
+    List.mapi
+      (fun i elt ->
+        if i = buffer.cursor_line - top_line && show_cursor then
+          Notty.I.( </> )
+            (cursor_image buffer.cursor_pos)
+            (Notty.I.string Notty.A.empty elt)
+        else Notty.I.string Notty.A.empty elt)
+      remaining
+  in
+  let widthcropped =
+    Notty.I.vcat (List.map (wrap2 width) superimposed)
+  in
+  let heightcropped =
+    Notty.I.vcrop 0 (List.length remaining - height) widthcropped
+  in
+  Notty.I.( </> ) heightcropped @@ Notty.I.void height width
