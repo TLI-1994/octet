@@ -188,7 +188,7 @@ let rec list_from_nth lst = function
   | 0 -> lst
   | n -> list_from_nth (List.tl lst) @@ (n - 1)
 
-let wrap2 width img =
+let wrap_to width img =
   let rec go off =
     I.hcrop off 0 img
     :: (if I.width img - off > width then go (off + width) else [])
@@ -216,7 +216,7 @@ let to_image
         else I.string A.empty elt)
       remaining
   in
-  let widthcropped = I.vcat (List.map (wrap2 width) superimposed) in
+  let widthcropped = I.vcat (List.map (wrap_to width) superimposed) in
   let heightcropped =
     I.vcrop 0 (List.length remaining - height) widthcropped
   in
