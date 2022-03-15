@@ -3,6 +3,7 @@ type t = {
   cursor_pos : int;
   contents : string list;
   cursor_pos_cache : int;
+  desc : string;
 }
 
 let empty : t =
@@ -11,6 +12,7 @@ let empty : t =
     cursor_pos = 0;
     contents = [ "" ];
     cursor_pos_cache = 0;
+    desc = "Empty Buffer";
   }
 
 let from_string s =
@@ -56,6 +58,7 @@ let rec insert_newline_aux
 
 let insert_newline t =
   {
+    t with
     cursor_line = t.cursor_line + 1;
     cursor_pos = 0;
     contents =
@@ -167,6 +170,7 @@ let rec delete_aux
 let delete (buffer : t) =
   let nb = mv_cursor buffer `Left in
   {
+    buffer with
     cursor_line = nb.cursor_line;
     cursor_pos = nb.cursor_pos;
     contents =
@@ -207,6 +211,7 @@ let to_image
     (top_line : int)
     ((width, height) : int * int)
     (show_cursor : bool) =
+  let height = height - 1 in
   let remaining = list_from_nth buffer.contents top_line in
   let superimposed =
     List.mapi
@@ -218,6 +223,6 @@ let to_image
   in
   let widthcropped = I.vcat (List.map (wrap_to width) superimposed) in
   let heightcropped =
-    I.vcrop 0 (List.length remaining - height) widthcropped
+    I.vcrop 0 (I.height widthcropped - height) widthcropped
   in
-  heightcropped </> I.void height width
+  heightcropped <-> I.string A.(fg red ++ bg white) buffer.desc
