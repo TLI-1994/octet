@@ -18,7 +18,9 @@ let empty : t =
 let read_file (file_name : string) =
   let in_channel = open_in file_name in
   let rec read_all init =
-    try read_all (init ^ input_line in_channel)
+    try
+      read_all
+        ((if init = "" then "" else init ^ "\n") ^ input_line in_channel)
     with End_of_file -> init
   in
   read_all ""
