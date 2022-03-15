@@ -10,6 +10,9 @@ val toggle_focus : t -> t
 val update_all : Notty.Unescape.key -> t -> t
 (** applies a keystroke to all buffers *)
 
+val write_all : t -> unit
+(** write all buffer contents to files *)
+
 val ( <-> ) : t -> t -> t
 (** vertically stack buffers *)
 

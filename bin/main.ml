@@ -2,8 +2,8 @@
 open Notty_unix
 open Buffermanager
 
-let init_l = Obuffer.empty |> init |> toggle_focus
-let init_r = Obuffer.empty |> init |> toggle_focus
+let init_l = Obuffer.from_file "input.txt" |> init |> toggle_focus
+let init_r = Obuffer.empty |> init
 let init_bm = init_l <|> init_r
 
 let main =
@@ -14,7 +14,8 @@ let main =
     match Term.event t with
     | `Key (`ASCII 'X', [ `Ctrl ]) -> (
         match Term.event t with
-        | `Key (`ASCII 'C', [ `Ctrl ]) -> ()
+        | `Key (`ASCII 'C', [ `Ctrl ]) -> write_all state
+        | `Key (`ASCII 'S', [ `Ctrl ]) -> loop t (toggle_focus state)
         | _ -> loop t state)
     | `Key key -> update t (update_all key state)
     | `Resize _ -> update t state

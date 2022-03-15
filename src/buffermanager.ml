@@ -25,6 +25,12 @@ let rec update_all key = function
         Leaf { r with buffer = Obuffer.update_on_key r.buffer key }
       else Leaf r
 
+let rec write_all = function
+  | Hsplit (t1, t2) | Vsplit (t1, t2) ->
+      write_all t1;
+      write_all t2
+  | Leaf r -> Obuffer.write_to_file r.buffer
+
 let ( <-> ) bm1 bm2 = Hsplit (bm1, bm2)
 let ( <|> ) bm1 bm2 = Vsplit (bm1, bm2)
 

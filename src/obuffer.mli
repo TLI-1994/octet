@@ -3,8 +3,11 @@ type t
 val empty : t
 (** The empty buffer. *)
 
-val from_string : string -> t
-(** [from_string s] is a buffer containing [s]. *)
+val from_file : string -> t
+(** [from_file s] is a buffer containing the contents of the path [s]. *)
+
+val write_to_file : t -> unit
+(** write the contents of the buffer to the file in its name *)
 
 val update_on_key : t -> Notty.Unescape.key -> t
 (** [handle_keystroke buffer key] is [buffer] updated according to the

@@ -15,8 +15,27 @@ let empty : t =
     desc = "Empty Buffer";
   }
 
+let read_file (file_name : string) =
+  let in_channel = open_in file_name in
+  let rec read_all init =
+    try read_all (init ^ input_line in_channel)
+    with End_of_file -> init
+  in
+  read_all ""
+
 let from_string s =
   { empty with contents = String.split_on_char '\n' s }
+
+let from_file s =
+  let ans = s |> read_file |> from_string in
+  { ans with desc = s }
+
+let to_string buffer = String.concat "\n" buffer.contents
+
+let write_to_file buffer =
+  let out_channel = open_out buffer.desc in
+  Printf.fprintf out_channel "%s\n" (to_string buffer);
+  close_out out_channel
 
 (* TODO: deleted this function when appropriate. *)
 let buffer_contents buffer = buffer.contents
