@@ -43,4 +43,4 @@ let rec to_image (dim : int * int) =
   | Vsplit (t1, t2) ->
       to_image (fst dim / 2, snd dim) t1
       <|> to_image (fst dim / 2, snd dim) t2
-  | Leaf b -> Obuffer.to_image b.buffer 0 dim true
+  | Leaf b -> Obuffer.to_image b.buffer 0 dim b.active

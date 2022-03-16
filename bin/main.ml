@@ -15,7 +15,7 @@ let main =
     | `Key (`ASCII 'X', [ `Ctrl ]) -> (
         match Term.event t with
         | `Key (`ASCII 'C', [ `Ctrl ]) -> write_all state
-        | `Key (`ASCII 'S', [ `Ctrl ]) -> loop t (toggle_focus state)
+        | `Key (`ASCII 'S', [ `Ctrl ]) -> update t (toggle_focus state)
         | _ -> loop t state)
     | `Key key -> update t (update_all key state)
     | `Resize _ -> update t state

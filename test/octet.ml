@@ -25,13 +25,17 @@ let split_test
     (split_at_n input_line i)
     ~printer:string_of_string_list
 
-(** TODO: test Obuffer.break_line. *)
+let delete_test
+    (name : string)
+    (input_line : string)
+    (i : int)
+    (expected_output : string) : test =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (delete_nth input_line i)
+    ~printer:String.escaped
 
-(** TODO: test Obuffer.nth_line_len. *)
-
-(** TODO: test Obuffer.delete_from_line. *)
-
-let obuffer_tests =
+let util_tests =
   [
     insert_test "insert at start of string" "hello world" 0 'g'
       "ghello world";
@@ -47,7 +51,10 @@ let obuffer_tests =
     split_test "split at end of string" "hello world" 11
       [ "hello world"; "" ];
     split_test "split empty string" "" 0 [ ""; "" ];
+    delete_test "delete single-char string" "0" 0 "";
+    delete_test "delete middle of string" "abcd" 1 "acd";
+    delete_test "delete end of string" "abcd" 3 "abc";
   ]
 
-let tests = "test suite for project" >::: List.flatten [ obuffer_tests ]
+let tests = "test suite for project" >::: List.flatten [ util_tests ]
 let _ = run_test_tt_main tests
