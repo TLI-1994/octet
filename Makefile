@@ -21,3 +21,7 @@ doc:
 cloc:
 	ocamlbuild -clean
 	cloc --by-file --include-lang=OCaml .
+
+zip:
+	rm -f octet.zip
+	zip -r octet.zip . -x@exclude.lst
