@@ -227,6 +227,15 @@ open Notty.Infix
 let cursor_image width =
   I.void width 1 <|> I.string A.(bg lightblack) cursor_icon
 
+let modeline_to_image (buffer : t) (width : int) =
+  I.string
+    A.(fg red ++ bg white)
+    (buffer.desc ^ "    Line: "
+    ^ string_of_int buffer.cursor_line
+    ^ "    Col: "
+    ^ string_of_int buffer.cursor_pos)
+  </> I.char A.(fg red ++ bg white) ' ' width 1
+
 let to_image
     (buffer : t)
     (top_line : int)
@@ -246,4 +255,4 @@ let to_image
   let heightcropped =
     I.vcrop 0 (I.height widthcropped - height) widthcropped
   in
-  heightcropped <-> I.string A.(fg red ++ bg white) buffer.desc
+  heightcropped <-> modeline_to_image buffer width
