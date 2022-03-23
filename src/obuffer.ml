@@ -229,12 +229,12 @@ let cursor_image width =
 
 let modeline_to_image (buffer : t) (width : int) =
   I.string
-    A.(fg red ++ bg white)
+    A.(fg black ++ bg white)
     (buffer.desc ^ "    Line: "
     ^ string_of_int buffer.cursor_line
     ^ "    Col: "
     ^ string_of_int buffer.cursor_pos)
-  </> I.char A.(fg red ++ bg white) ' ' width 1
+  </> I.char A.(fg black ++ bg white) ' ' width 1
 
 let to_image
     (buffer : t)
