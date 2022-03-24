@@ -1,4 +1,3 @@
-(*open Notty*)
 open Notty_unix
 open Buffermanager
 
