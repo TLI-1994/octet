@@ -1,5 +1,6 @@
 (* type buffer_params = { location : [ `Left | `Right | `Bottom ] } *)
 (* type t = { buffers : Obuffer.t list } *)
+open Notty
 
 type t =
   | Hsplit of t * t
@@ -41,6 +42,7 @@ let rec to_image (dim : int * int) =
       to_image (fst dim, snd dim / 2) t1
       <-> to_image (fst dim, snd dim / 2) t2
   | Vsplit (t1, t2) ->
-      to_image (fst dim / 2, snd dim) t1
-      <|> to_image (fst dim / 2, snd dim) t2
+      to_image ((fst dim - 1) / 2, snd dim) t1
+      <|> I.char A.empty '|' 1 (snd dim)
+      <|> to_image ((fst dim - 1) / 2, snd dim) t2
   | Leaf b -> Obuffer.to_image b.buffer 0 dim b.active
