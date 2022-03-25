@@ -199,11 +199,58 @@ let delete (buffer : t) =
     cursor_pos_cache = nb.cursor_pos_cache;
   }
 
+let rec forward_word (buffer : t) =
+  let curr_line = List.nth buffer.contents buffer.cursor_line in
+  if
+    buffer.cursor_pos = String.length curr_line
+    && buffer.cursor_line <> List.length buffer.contents - 1
+  then
+    forward_word
+      {
+        buffer with
+        cursor_line = buffer.cursor_line + 1;
+        cursor_pos = 0;
+      }
+  else
+    match
+      try String.index_from_opt curr_line buffer.cursor_pos ' '
+      with Invalid_argument _ -> failwith "cursor out of bound"
+    with
+    | None -> { buffer with cursor_pos = String.length curr_line }
+    | Some i ->
+        if i = buffer.cursor_pos then
+          forward_word { buffer with cursor_pos = i + 1 }
+        else { buffer with cursor_pos = i }
+
+let rec backward_word (buffer : t) =
+  let curr_line = List.nth buffer.contents buffer.cursor_line in
+  if buffer.cursor_pos = 0 && buffer.cursor_line <> 0 then
+    let cursor_line = buffer.cursor_line - 1 in
+    backward_word
+      {
+        buffer with
+        cursor_line;
+        cursor_pos =
+          List.nth buffer.contents cursor_line |> String.length;
+      }
+  else
+    match
+      try String.rindex_from_opt curr_line (buffer.cursor_pos - 1) ' '
+      with Invalid_argument _ -> failwith "cursor out of bound"
+    with
+    | None -> { buffer with cursor_pos = 0 }
+    | Some i ->
+        if not (i = buffer.cursor_pos - 1) then
+          { buffer with cursor_pos = i + 1 }
+        else backward_word { buffer with cursor_pos = i }
+
 open Notty
 
 let update_on_key (buffer : t) (key : Unescape.key) =
   match key with
   | `Enter, _ -> insert_newline buffer
+  | `ASCII 'F', [ `Ctrl ] -> forward_word buffer
+  | `ASCII 'B', [ `Ctrl ] -> backward_word buffer
   | `ASCII ch, _ -> insert_ascii buffer ch
   | `Backspace, _ | `Delete, _ -> delete buffer
   | `Arrow direxn, _ -> mv_cursor buffer direxn
