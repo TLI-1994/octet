@@ -24,4 +24,6 @@ let main =
   update t init_bm;
   Term.release t
 
+let status = Sys.command "echo \"hello world\""
+let _ = Printf.printf "status = %d\n" status
 let () = main
