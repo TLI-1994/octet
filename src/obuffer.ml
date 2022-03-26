@@ -244,12 +244,13 @@ let rec backward_word (buffer : t) =
           { buffer with cursor_pos = i + 1 }
         else backward_word { buffer with cursor_pos = i }
 
-let rec delete_nth_until buffer n j =
+let rec delete_nth_to (buffer : t) n j =
   match j - buffer.cursor_pos with
   | 0 -> buffer
+  | m when m < 0 -> raise (Invalid_argument "j")
   | _ ->
       let contents = delete_aux n j [] buffer.contents in
-      delete_nth_until { buffer with contents } n (j - 1)
+      delete_nth_to { buffer with contents } n (j - 1)
 
 let rec kill_word (buffer : t) =
   let curr_line = List.nth buffer.contents buffer.cursor_line in
@@ -265,14 +266,34 @@ let rec kill_word (buffer : t) =
       with Invalid_argument _ -> failwith "cursor out of bound"
     with
     | None ->
-        delete_nth_until buffer buffer.cursor_line
+        delete_nth_to buffer buffer.cursor_line
         @@ String.length curr_line
     | Some i ->
         if i <> buffer.cursor_pos then
-          delete_nth_until buffer buffer.cursor_line i
+          delete_nth_to buffer buffer.cursor_line i
         else
+          delete_nth_to buffer buffer.cursor_line (i + 1) |> kill_word
+
+let rec delete_nth_until (buffer : t) n j =
+  match buffer.cursor_pos - j with
+  | 0 -> buffer
+  | m when m < 0 -> raise (Invalid_argument "j")
+  | _ -> delete_nth_until (delete buffer) n j
+
+let rec bkill_word (buffer : t) =
+  if buffer.cursor_pos = 0 && buffer.cursor_line <> 0 then
+    bkill_word (delete buffer)
+  else
+    let curr_line = List.nth buffer.contents buffer.cursor_line in
+    match
+      try String.rindex_from_opt curr_line (buffer.cursor_pos - 1) ' '
+      with Invalid_argument _ -> failwith "cursor out of bound"
+    with
+    | None -> delete_nth_until buffer buffer.cursor_line 0
+    | Some i ->
+        if not (i = buffer.cursor_pos - 1) then
           delete_nth_until buffer buffer.cursor_line (i + 1)
-          |> kill_word
+        else delete_nth_until buffer buffer.cursor_line i |> bkill_word
 
 open Notty
 
@@ -282,6 +303,7 @@ let update_on_key (buffer : t) (key : Unescape.key) =
   | `ASCII 'F', [ `Ctrl ] -> forward_word buffer
   | `ASCII 'B', [ `Ctrl ] -> backward_word buffer
   | `ASCII 'D', [ `Ctrl ] -> kill_word buffer
+  | `ASCII 'R', [ `Ctrl ] -> bkill_word buffer
   | `ASCII ch, _ -> insert_ascii buffer ch
   | `Backspace, _ | `Delete, _ -> delete buffer
   | `Arrow direxn, _ -> mv_cursor buffer direxn
