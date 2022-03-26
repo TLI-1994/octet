@@ -309,13 +309,15 @@ open Notty
 let update_on_key (buffer : t) (key : Unescape.key) =
   match key with
   | `Enter, _ -> insert_newline buffer
-  | `ASCII 'F', [ `Ctrl ] -> forward_word buffer
-  | `ASCII 'B', [ `Ctrl ] -> backward_word buffer
-  | `ASCII 'D', [ `Ctrl ] -> kill_word buffer
-  | `ASCII 'R', [ `Ctrl ] -> bkill_word buffer
-  | `ASCII 'E', [ `Ctrl ] -> to_end_of_line buffer
-  | `ASCII 'A', [ `Ctrl ] -> to_begin_of_line buffer
-  | `ASCII ch, _ -> insert_ascii buffer ch
+  | `ASCII 'f', [ `Meta ] -> forward_word buffer
+  | `ASCII 'b', [ `Meta ] -> backward_word buffer
+  | `ASCII 'd', [ `Meta ] -> kill_word buffer
+  | `Backspace, [ `Meta ] -> bkill_word buffer
+  | `ASCII 'e', [ `Ctrl ] -> to_end_of_line buffer
+  | `ASCII 'a', [ `Ctrl ] -> to_begin_of_line buffer
+  | `ASCII ch, [] -> insert_ascii buffer ch
+  (* | `ASCII c, [ `Meta ] -> insert_ascii (insert_ascii buffer c)
+     'X' *)
   | `Backspace, _ | `Delete, _ -> delete buffer
   | `Arrow direxn, _ -> mv_cursor buffer direxn
   | _ -> buffer
