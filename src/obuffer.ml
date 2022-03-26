@@ -244,6 +244,36 @@ let rec backward_word (buffer : t) =
           { buffer with cursor_pos = i + 1 }
         else backward_word { buffer with cursor_pos = i }
 
+let rec delete_nth_until buffer n j =
+  match j - buffer.cursor_pos with
+  | 0 -> buffer
+  | _ ->
+      let contents = delete_aux n j [] buffer.contents in
+      delete_nth_until { buffer with contents } n (j - 1)
+
+let rec kill_word (buffer : t) =
+  let curr_line = List.nth buffer.contents buffer.cursor_line in
+  if
+    buffer.cursor_pos = String.length curr_line
+    && buffer.cursor_line <> List.length buffer.contents - 1
+  then
+    let cursor_line, cursor_pos = (buffer.cursor_line + 1, 0) in
+    kill_word (delete { buffer with cursor_line; cursor_pos })
+  else
+    match
+      try String.index_from_opt curr_line buffer.cursor_pos ' '
+      with Invalid_argument _ -> failwith "cursor out of bound"
+    with
+    | None ->
+        delete_nth_until buffer buffer.cursor_line
+        @@ String.length curr_line
+    | Some i ->
+        if i <> buffer.cursor_pos then
+          delete_nth_until buffer buffer.cursor_line i
+        else
+          delete_nth_until buffer buffer.cursor_line (i + 1)
+          |> kill_word
+
 open Notty
 
 let update_on_key (buffer : t) (key : Unescape.key) =
@@ -251,6 +281,7 @@ let update_on_key (buffer : t) (key : Unescape.key) =
   | `Enter, _ -> insert_newline buffer
   | `ASCII 'F', [ `Ctrl ] -> forward_word buffer
   | `ASCII 'B', [ `Ctrl ] -> backward_word buffer
+  | `ASCII 'D', [ `Ctrl ] -> kill_word buffer
   | `ASCII ch, _ -> insert_ascii buffer ch
   | `Backspace, _ | `Delete, _ -> delete buffer
   | `Arrow direxn, _ -> mv_cursor buffer direxn
