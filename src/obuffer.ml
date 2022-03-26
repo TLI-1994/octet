@@ -199,11 +199,122 @@ let delete (buffer : t) =
     cursor_pos_cache = nb.cursor_pos_cache;
   }
 
+let rec forward_word (buffer : t) =
+  let curr_line = List.nth buffer.contents buffer.cursor_line in
+  if
+    buffer.cursor_pos = String.length curr_line
+    && buffer.cursor_line <> List.length buffer.contents - 1
+  then
+    forward_word
+      {
+        buffer with
+        cursor_line = buffer.cursor_line + 1;
+        cursor_pos = 0;
+      }
+  else
+    match
+      try String.index_from_opt curr_line buffer.cursor_pos ' '
+      with Invalid_argument _ -> failwith "cursor out of bound"
+    with
+    | None -> { buffer with cursor_pos = String.length curr_line }
+    | Some i ->
+        if i = buffer.cursor_pos then
+          forward_word { buffer with cursor_pos = i + 1 }
+        else { buffer with cursor_pos = i }
+
+let rec backward_word (buffer : t) =
+  let curr_line = List.nth buffer.contents buffer.cursor_line in
+  if buffer.cursor_pos = 0 && buffer.cursor_line <> 0 then
+    let cursor_line = buffer.cursor_line - 1 in
+    backward_word
+      {
+        buffer with
+        cursor_line;
+        cursor_pos =
+          List.nth buffer.contents cursor_line |> String.length;
+      }
+  else
+    match
+      try String.rindex_from_opt curr_line (buffer.cursor_pos - 1) ' '
+      with Invalid_argument _ -> failwith "cursor out of bound"
+    with
+    | None -> { buffer with cursor_pos = 0 }
+    | Some i ->
+        if not (i = buffer.cursor_pos - 1) then
+          { buffer with cursor_pos = i + 1 }
+        else backward_word { buffer with cursor_pos = i }
+
+let rec delete_nth_to (buffer : t) n j =
+  match j - buffer.cursor_pos with
+  | 0 -> buffer
+  | m when m < 0 -> raise (Invalid_argument "j")
+  | _ ->
+      let contents = delete_aux n j [] buffer.contents in
+      delete_nth_to { buffer with contents } n (j - 1)
+
+let rec kill_word (buffer : t) =
+  let curr_line = List.nth buffer.contents buffer.cursor_line in
+  if
+    buffer.cursor_pos = String.length curr_line
+    && buffer.cursor_line <> List.length buffer.contents - 1
+  then
+    let cursor_line, cursor_pos = (buffer.cursor_line + 1, 0) in
+    kill_word (delete { buffer with cursor_line; cursor_pos })
+  else
+    match
+      try String.index_from_opt curr_line buffer.cursor_pos ' '
+      with Invalid_argument _ -> failwith "cursor out of bound"
+    with
+    | None ->
+        delete_nth_to buffer buffer.cursor_line
+        @@ String.length curr_line
+    | Some i ->
+        if i <> buffer.cursor_pos then
+          delete_nth_to buffer buffer.cursor_line i
+        else
+          delete_nth_to buffer buffer.cursor_line (i + 1) |> kill_word
+
+let rec delete_nth_until (buffer : t) n j =
+  match buffer.cursor_pos - j with
+  | 0 -> buffer
+  | m when m < 0 -> raise (Invalid_argument "j")
+  | _ -> delete_nth_until (delete buffer) n j
+
+let rec bkill_word (buffer : t) =
+  if buffer.cursor_pos = 0 && buffer.cursor_line <> 0 then
+    bkill_word (delete buffer)
+  else
+    let curr_line = List.nth buffer.contents buffer.cursor_line in
+    match
+      try String.rindex_from_opt curr_line (buffer.cursor_pos - 1) ' '
+      with Invalid_argument _ -> failwith "cursor out of bound"
+    with
+    | None -> delete_nth_until buffer buffer.cursor_line 0
+    | Some i ->
+        if not (i = buffer.cursor_pos - 1) then
+          delete_nth_until buffer buffer.cursor_line (i + 1)
+        else delete_nth_until buffer buffer.cursor_line i |> bkill_word
+
+let to_end_of_line (buffer : t) =
+  {
+    buffer with
+    cursor_pos =
+      List.nth buffer.contents buffer.cursor_line |> String.length;
+  }
+
+let to_begin_of_line (buffer : t) = { buffer with cursor_pos = 0 }
+
 open Notty
 
 let update_on_key (buffer : t) (key : Unescape.key) =
   match key with
   | `Enter, _ -> insert_newline buffer
+  | `ASCII 'F', [ `Ctrl ] -> forward_word buffer
+  | `ASCII 'B', [ `Ctrl ] -> backward_word buffer
+  | `ASCII 'D', [ `Ctrl ] -> kill_word buffer
+  | `ASCII 'R', [ `Ctrl ] -> bkill_word buffer
+  | `ASCII 'E', [ `Ctrl ] -> to_end_of_line buffer
+  | `ASCII 'A', [ `Ctrl ] -> to_begin_of_line buffer
   | `ASCII ch, _ -> insert_ascii buffer ch
   | `Backspace, _ | `Delete, _ -> delete buffer
   | `Arrow direxn, _ -> mv_cursor buffer direxn
