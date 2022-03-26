@@ -295,6 +295,15 @@ let rec bkill_word (buffer : t) =
           delete_nth_until buffer buffer.cursor_line (i + 1)
         else delete_nth_until buffer buffer.cursor_line i |> bkill_word
 
+let to_end_of_line (buffer : t) =
+  {
+    buffer with
+    cursor_pos =
+      List.nth buffer.contents buffer.cursor_line |> String.length;
+  }
+
+let to_begin_of_line (buffer : t) = { buffer with cursor_pos = 0 }
+
 open Notty
 
 let update_on_key (buffer : t) (key : Unescape.key) =
@@ -304,6 +313,8 @@ let update_on_key (buffer : t) (key : Unescape.key) =
   | `ASCII 'B', [ `Ctrl ] -> backward_word buffer
   | `ASCII 'D', [ `Ctrl ] -> kill_word buffer
   | `ASCII 'R', [ `Ctrl ] -> bkill_word buffer
+  | `ASCII 'E', [ `Ctrl ] -> to_end_of_line buffer
+  | `ASCII 'A', [ `Ctrl ] -> to_begin_of_line buffer
   | `ASCII ch, _ -> insert_ascii buffer ch
   | `Backspace, _ | `Delete, _ -> delete buffer
   | `Arrow direxn, _ -> mv_cursor buffer direxn
