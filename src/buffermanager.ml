@@ -25,6 +25,14 @@ let rec update_all key = function
         Leaf { r with buffer = Obuffer.update_on_key r.buffer key }
       else Leaf r
 
+let rec autoformat = function
+  | Hsplit (t1, t2) -> Hsplit (autoformat t1, autoformat t2)
+  | Vsplit (t1, t2) -> Vsplit (autoformat t1, autoformat t2)
+  | Leaf r ->
+      if r.active then
+        Leaf { r with buffer = Obuffer.ocaml_format r.buffer }
+      else Leaf r
+
 let rec write_all = function
   | Hsplit (t1, t2) | Vsplit (t1, t2) ->
       write_all t1;
