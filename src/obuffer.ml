@@ -315,7 +315,9 @@ let update_on_key (buffer : t) (key : Unescape.key) =
   | `Backspace, [ `Meta ] -> bkill_word buffer
   | `ASCII 'E', [ `Ctrl ] -> to_end_of_line buffer
   | `ASCII 'A', [ `Ctrl ] -> to_begin_of_line buffer
-  | `ASCII ch, _ -> insert_ascii buffer ch
+  | `ASCII ch, [] -> insert_ascii buffer ch
+  (* | `ASCII c, [ `Meta ] -> insert_ascii (insert_ascii buffer c)
+     'X' *)
   | `Backspace, _ | `Delete, _ -> delete buffer
   | `Arrow direxn, _ -> mv_cursor buffer direxn
   | _ -> buffer
