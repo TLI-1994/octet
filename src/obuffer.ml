@@ -1,9 +1,15 @@
+open Notty
+open Notty.Infix
+
 type t = {
   cursor_line : int;
   cursor_pos : int;
   contents : string list;
   cursor_pos_cache : int;
   desc : string;
+  mark_line : int;
+  mark_pos : int;
+  mark_active : bool;
 }
 
 let empty : t =
@@ -13,6 +19,9 @@ let empty : t =
     contents = [ "" ];
     cursor_pos_cache = 0;
     desc = "data/Empty Buffer";
+    mark_line = 0;
+    mark_pos = 0;
+    mark_active = false;
   }
 
 let read_file (file_name : string) =
@@ -202,6 +211,14 @@ let delete (buffer : t) =
     cursor_pos_cache = nb.cursor_pos_cache;
   }
 
+let toggle_mark (buffer : t) =
+  {
+    buffer with
+    mark_active = not buffer.mark_active;
+    mark_line = buffer.cursor_line;
+    mark_pos = buffer.cursor_pos;
+  }
+
 let rec forward_word (buffer : t) =
   let curr_line = List.nth buffer.contents buffer.cursor_line in
   if
@@ -307,11 +324,10 @@ let to_end_of_line (buffer : t) =
 
 let to_begin_of_line (buffer : t) = { buffer with cursor_pos = 0 }
 
-open Notty
-
 let update_on_key (buffer : t) (key : Unescape.key) =
   match key with
   | `Enter, _ -> insert_newline buffer
+  | `ASCII 'P', [ `Ctrl ] -> toggle_mark buffer
   | `ASCII 'f', [ `Meta ] -> forward_word buffer
   | `ASCII 'b', [ `Meta ] -> backward_word buffer
   | `ASCII 'd', [ `Meta ] -> kill_word buffer
@@ -338,19 +354,90 @@ let wrap_to width img =
 
 let cursor_icon = " "
 
-open Notty.Infix
-
 let cursor_image width =
   I.void width 1 <|> I.string A.(bg lightcyan ++ st blink) cursor_icon
 
 let modeline_to_image (buffer : t) (width : int) =
   I.string
     A.(fg black ++ bg white)
-    (buffer.desc ^ "    Line: "
+    (buffer.desc ^ "  Cursor Line: "
     ^ string_of_int buffer.cursor_line
-    ^ "    Col: "
-    ^ string_of_int buffer.cursor_pos)
+    ^ "  Col: "
+    ^ string_of_int buffer.cursor_pos
+    ^ " Mark Line: "
+    ^ string_of_int buffer.mark_line
+    ^ "  Col: "
+    ^ string_of_int buffer.mark_pos)
   </> I.char A.(fg black ++ bg white) ' ' width 1
+
+let add_cursor (line : image) (cursor_pos : int) =
+  cursor_image cursor_pos </> line
+
+let render_unselected (line : string) : image = I.string A.empty line
+
+let render_selected (line : string) : image =
+  I.string A.(bg lightblack) line
+
+let render_beginning_selected (line : string) (pos : int) : image =
+  let parts = Util.split_at_n line pos in
+  render_selected (List.nth parts 0)
+  <|> render_unselected (List.nth parts 1)
+
+let render_end_selected (line : string) (pos : int) : image =
+  let parts = Util.split_at_n line pos in
+  render_unselected (List.nth parts 0)
+  <|> render_selected (List.nth parts 1)
+
+let render_selected_in_line (line : string) (s : int) (e : int) : image
+    =
+  let parts = Util.split_at_n line e in
+  render_end_selected (List.nth parts 0) s
+  <|> render_unselected (List.nth parts 1)
+
+let _ = render_beginning_selected
+let _ = render_end_selected
+
+let render_line_without_cursor
+    (buffer : t)
+    (absolute_line : int)
+    (line : string) =
+  if buffer.mark_active then
+    let min_select = min buffer.cursor_line buffer.mark_line in
+    let max_select = max buffer.cursor_line buffer.mark_line in
+    let min_select_pos = min buffer.cursor_pos buffer.mark_pos in
+    let max_select_pos = max buffer.cursor_pos buffer.mark_pos in
+    let start_pos =
+      if buffer.cursor_line < buffer.mark_line then buffer.cursor_pos
+      else buffer.mark_pos
+    in
+    let end_pos =
+      if buffer.cursor_line > buffer.mark_line then buffer.cursor_pos
+      else buffer.mark_pos
+    in
+    if min_select = max_select && absolute_line = min_select then
+      (* one line *)
+      render_selected_in_line line min_select_pos max_select_pos
+    else if absolute_line < min_select then render_unselected line
+    else if absolute_line > max_select then render_unselected line
+    else if absolute_line = min_select then
+      render_end_selected line start_pos
+    else if absolute_line = max_select then
+      render_beginning_selected line end_pos
+    else render_selected line
+  else render_unselected line
+
+let render_line
+    (buffer : t)
+    (top_line : int)
+    (show_cursor : bool)
+    (i : int)
+    (elt : string) =
+  let absolute_location = i + top_line in
+  if absolute_location = buffer.cursor_line && show_cursor then
+    add_cursor
+      (render_line_without_cursor buffer absolute_location elt)
+      buffer.cursor_pos
+  else render_line_without_cursor buffer absolute_location elt
 
 let to_image
     (buffer : t)
@@ -377,16 +464,12 @@ let to_image
   in
   let remaining = list_from_nth buffer_contents top_line in
   let superimposed =
-    List.mapi
-      (fun i elt ->
-        if i = buffer.cursor_line - top_line && show_cursor then
-          cursor_image buffer.cursor_pos </> I.string attr elt
-        else I.string attr elt)
-      (List.map
+    List.mapi (render_line buffer top_line show_cursor) remaining
+(*      (List.map
          (fun s ->
            let l = String.length s in
            if l >= width then s else s ^ String.make (width - l) ' ')
-         remaining)
+         remaining)*)
   in
   let widthcropped = I.vcat (List.map (wrap_to width) superimposed) in
   let heightcropped =
