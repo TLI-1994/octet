@@ -12,7 +12,7 @@ let empty : t =
     cursor_pos = 0;
     contents = [ "" ];
     cursor_pos_cache = 0;
-    desc = "Empty Buffer";
+    desc = "data/Empty Buffer";
   }
 
 let read_file (file_name : string) =
@@ -309,13 +309,15 @@ open Notty
 let update_on_key (buffer : t) (key : Unescape.key) =
   match key with
   | `Enter, _ -> insert_newline buffer
-  | `ASCII 'F', [ `Ctrl ] -> forward_word buffer
-  | `ASCII 'B', [ `Ctrl ] -> backward_word buffer
-  | `ASCII 'D', [ `Ctrl ] -> kill_word buffer
-  | `ASCII 'R', [ `Ctrl ] -> bkill_word buffer
+  | `ASCII 'f', [ `Meta ] -> forward_word buffer
+  | `ASCII 'b', [ `Meta ] -> backward_word buffer
+  | `ASCII 'd', [ `Meta ] -> kill_word buffer
+  | `Backspace, [ `Meta ] -> bkill_word buffer
   | `ASCII 'E', [ `Ctrl ] -> to_end_of_line buffer
   | `ASCII 'A', [ `Ctrl ] -> to_begin_of_line buffer
-  | `ASCII ch, _ -> insert_ascii buffer ch
+  | `ASCII ch, [] -> insert_ascii buffer ch
+  (* | `ASCII c, [ `Meta ] -> insert_ascii (insert_ascii buffer c)
+     'X' *)
   | `Backspace, _ | `Delete, _ -> delete buffer
   | `Arrow direxn, _ -> mv_cursor buffer direxn
   | _ -> buffer
@@ -367,3 +369,13 @@ let to_image
     I.vcrop 0 (I.height widthcropped - height) widthcropped
   in
   heightcropped <-> modeline_to_image buffer width
+
+let ocaml_format (buffer : t) =
+  let temp_path = "data/_temp.autoformat" in
+  let out_channel = open_out temp_path in
+  let _ = Printf.fprintf out_channel "%s\n" (to_string buffer) in
+  close_out out_channel;
+  let _ = Sys.command ("ocamlformat --inplace " ^ temp_path) in
+  let new_buffer = from_file temp_path in
+  let _ = Sys.command ("rm " ^ temp_path) in
+  { new_buffer with desc = buffer.desc }

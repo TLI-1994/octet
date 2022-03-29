@@ -103,11 +103,26 @@ let rec update_all key = function
       if r.active then
         Leaf { r with buffer = Obuffer.update_on_key r.buffer key }
       else Leaf r
+
+let rec autoformat = function
+  | Hsplit (t1, t2) -> Hsplit (autoformat t1, autoformat t2)
+  | Vsplit (t1, t2) -> Vsplit (autoformat t1, autoformat t2)
+  | Leaf r ->
+      if r.active then
+        Leaf { r with buffer = Obuffer.ocaml_format r.buffer }
+      else Leaf r
+
+let rec write_all = function
+  | Hsplit (t1, t2) | Vsplit (t1, t2) ->
+      write_all t1;
+      write_all t2
+  | Leaf r -> Obuffer.write_to_file r.buffer
   | Minibuffer r ->
       if r.active then
         Minibuffer
           { r with buffer = Obuffer.update_on_key r.buffer key }
       else Minibuffer r
+
 
 let ( <-> ) bm1 bm2 = Hsplit (bm1, bm2)
 let ( <|> ) bm1 bm2 = Vsplit (bm1, bm2)
