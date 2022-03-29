@@ -16,14 +16,17 @@ let empty : t =
   }
 
 let read_file (file_name : string) =
-  let in_channel = open_in file_name in
-  let rec read_all init =
-    try
-      read_all
-        ((if init = "" then "" else init ^ "\n") ^ input_line in_channel)
-    with End_of_file -> init
-  in
-  read_all ""
+  try
+    let in_channel = open_in file_name in
+    let rec read_all init =
+      try
+        read_all
+          ((if init = "" then "" else init ^ "\n")
+          ^ input_line in_channel)
+      with End_of_file -> init
+    in
+    read_all ""
+  with Sys_error _ -> ""
 
 let from_string s =
   { empty with contents = String.split_on_char '\n' s }
@@ -338,7 +341,7 @@ let cursor_icon = " "
 open Notty.Infix
 
 let cursor_image width =
-  I.void width 1 <|> I.string A.(bg lightblack) cursor_icon
+  I.void width 1 <|> I.string A.(bg lightcyan ++ st blink) cursor_icon
 
 let modeline_to_image (buffer : t) (width : int) =
   I.string
@@ -355,20 +358,41 @@ let to_image
     ((width, height) : int * int)
     (show_cursor : bool) =
   let height = height - 1 in
-  let remaining = list_from_nth buffer.contents top_line in
+  let width = width - 5 in
+  let buffer_contents =
+    let l = List.length buffer.contents in
+    if l >= height then buffer.contents
+    else
+      buffer.contents
+      @ List.map (fun _ -> "") (Util.from 0 (height - l))
+  in
+  let line_nos =
+    Util.from 0 (height - 1)
+    |> List.map (fun d ->
+           I.string A.(bg black ++ st italic) (Printf.sprintf "% 3d " d))
+    |> I.vcat
+  in
+  let attr =
+    if show_cursor then A.(fg lightwhite ++ bg lightblack) else A.empty
+  in
+  let remaining = list_from_nth buffer_contents top_line in
   let superimposed =
     List.mapi
       (fun i elt ->
         if i = buffer.cursor_line - top_line && show_cursor then
-          cursor_image buffer.cursor_pos </> I.string A.empty elt
-        else I.string A.empty elt)
-      remaining
+          cursor_image buffer.cursor_pos </> I.string attr elt
+        else I.string attr elt)
+      (List.map
+         (fun s ->
+           let l = String.length s in
+           if l >= width then s else s ^ String.make (width - l) ' ')
+         remaining)
   in
   let widthcropped = I.vcat (List.map (wrap_to width) superimposed) in
   let heightcropped =
     I.vcrop 0 (I.height widthcropped - height) widthcropped
   in
-  heightcropped <-> modeline_to_image buffer width
+  line_nos <|> heightcropped <-> modeline_to_image buffer width
 
 let ocaml_format (buffer : t) =
   let temp_path = "data/_temp.autoformat" in

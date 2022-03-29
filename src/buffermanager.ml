@@ -1,4 +1,6 @@
+open Notty
 (** todo: rethink rep type--maybe lists for each split? *)
+
 type t =
   | Hsplit of t * t
   | Vsplit of t * t
@@ -136,8 +138,9 @@ let rec to_image (dim : int * int) =
       to_image (fst dim, snd dim / 2) t1
       <-> to_image (fst dim, snd dim / 2) t2
   | Vsplit (t1, t2) ->
-      to_image (fst dim / 2, snd dim) t1
-      <|> to_image (fst dim / 2, snd dim) t2
+      to_image ((fst dim - 1) / 2, snd dim) t1
+      <|> I.char A.empty '|' 1 (snd dim)
+      <|> to_image ((fst dim - 1) / 2, snd dim) t2
   | Leaf { buffer; active } -> Obuffer.to_image buffer 0 dim active
   | Minibuffer { buffer; active } ->
       Obuffer.to_image buffer 0 dim active
