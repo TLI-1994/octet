@@ -1,6 +1,4 @@
-(* type buffer_params = { location : [ `Left | `Right | `Bottom ] } *)
-(* type t = { buffers : Obuffer.t list } *)
-
+(** todo: rethink rep type--maybe lists for each split? *)
 type t =
   | Hsplit of t * t
   | Vsplit of t * t
@@ -20,6 +18,7 @@ let rec write_all = function
   | Minibuffer _ -> ()
   | Leaf r -> Obuffer.write_to_file r.buffer
 
+(** todo: rethink when the minibuffer gets added *)
 let empty_minibuffer =
   Minibuffer { buffer = Obuffer.empty; active = false }
 
@@ -103,6 +102,11 @@ let rec update_all key = function
       if r.active then
         Leaf { r with buffer = Obuffer.update_on_key r.buffer key }
       else Leaf r
+  | Minibuffer r ->
+      if r.active then
+        Minibuffer
+          { r with buffer = Obuffer.update_on_key r.buffer key }
+      else Minibuffer r
 
 let rec autoformat = function
   | Hsplit (t1, t2) -> Hsplit (autoformat t1, autoformat t2)
@@ -111,18 +115,14 @@ let rec autoformat = function
       if r.active then
         Leaf { r with buffer = Obuffer.ocaml_format r.buffer }
       else Leaf r
+  | Minibuffer _ as m -> m
 
 let rec write_all = function
   | Hsplit (t1, t2) | Vsplit (t1, t2) ->
       write_all t1;
       write_all t2
   | Leaf r -> Obuffer.write_to_file r.buffer
-  | Minibuffer r ->
-      if r.active then
-        Minibuffer
-          { r with buffer = Obuffer.update_on_key r.buffer key }
-      else Minibuffer r
-
+  | Minibuffer _ -> ()
 
 let ( <-> ) bm1 bm2 = Hsplit (bm1, bm2)
 let ( <|> ) bm1 bm2 = Vsplit (bm1, bm2)
