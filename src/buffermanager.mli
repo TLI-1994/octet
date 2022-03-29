@@ -1,11 +1,22 @@
 type t
 (** representation type of the buffer manager *)
 
+val empty_minibuffer : t
+
 val init : Obuffer.t -> t
 (** initialize a buffermanager with a single buffer *)
 
 val toggle_focus : t -> t
 (** changes whether keystrokes are received by this buffer *)
+
+val minibuffer_on : t -> t
+(** turns on the minibuffer and turns off all other buffers *)
+
+val minibuffer_off : t -> t
+(** turns off the minibuffer and turns on the top left buffer *)
+
+val perform_mb_command : t -> t
+(** performs the command in the minibuffer and clears it *)
 
 val update_all : Notty.Unescape.key -> t -> t
 (** applies a keystroke to all buffers *)
