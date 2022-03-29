@@ -373,26 +373,36 @@ let modeline_to_image (buffer : t) (width : int) =
 let add_cursor (line : image) (cursor_pos : int) =
   cursor_image cursor_pos </> line
 
-let render_unselected (line : string) : image = I.string A.empty line
+let render_unselected (line : string) (active : bool) : image =
+  I.string
+    (if active then A.(fg lightwhite ++ bg lightblack) else A.empty)
+    line
 
 let render_selected (line : string) : image =
-  I.string A.(bg lightblack) line
+  I.string A.(bg lightblue) line
 
-let render_beginning_selected (line : string) (pos : int) : image =
+let render_beginning_selected
+    (line : string)
+    (pos : int)
+    (active : bool) : image =
   let parts = Util.split_at_n line pos in
   render_selected (List.nth parts 0)
-  <|> render_unselected (List.nth parts 1)
+  <|> render_unselected (List.nth parts 1) active
 
-let render_end_selected (line : string) (pos : int) : image =
+let render_end_selected (line : string) (pos : int) (active : bool) :
+    image =
   let parts = Util.split_at_n line pos in
-  render_unselected (List.nth parts 0)
+  render_unselected (List.nth parts 0) active
   <|> render_selected (List.nth parts 1)
 
-let render_selected_in_line (line : string) (s : int) (e : int) : image
-    =
+let render_selected_in_line
+    (line : string)
+    (s : int)
+    (e : int)
+    (active : bool) : image =
   let parts = Util.split_at_n line e in
-  render_end_selected (List.nth parts 0) s
-  <|> render_unselected (List.nth parts 1)
+  render_end_selected (List.nth parts 0) s active
+  <|> render_unselected (List.nth parts 1) active
 
 let _ = render_beginning_selected
 let _ = render_end_selected
@@ -400,7 +410,8 @@ let _ = render_end_selected
 let render_line_without_cursor
     (buffer : t)
     (absolute_line : int)
-    (line : string) =
+    (line : string)
+    (active : bool) =
   if buffer.mark_active then
     let min_select = min buffer.cursor_line buffer.mark_line in
     let max_select = max buffer.cursor_line buffer.mark_line in
@@ -416,15 +427,17 @@ let render_line_without_cursor
     in
     if min_select = max_select && absolute_line = min_select then
       (* one line *)
-      render_selected_in_line line min_select_pos max_select_pos
-    else if absolute_line < min_select then render_unselected line
-    else if absolute_line > max_select then render_unselected line
+      render_selected_in_line line min_select_pos max_select_pos active
+    else if absolute_line < min_select then
+      render_unselected line active
+    else if absolute_line > max_select then
+      render_unselected line active
     else if absolute_line = min_select then
-      render_end_selected line start_pos
+      render_end_selected line start_pos active
     else if absolute_line = max_select then
-      render_beginning_selected line end_pos
+      render_beginning_selected line end_pos active
     else render_selected line
-  else render_unselected line
+  else render_unselected line active
 
 let render_line
     (buffer : t)
@@ -435,9 +448,11 @@ let render_line
   let absolute_location = i + top_line in
   if absolute_location = buffer.cursor_line && show_cursor then
     add_cursor
-      (render_line_without_cursor buffer absolute_location elt)
+      (render_line_without_cursor buffer absolute_location elt
+         show_cursor)
       buffer.cursor_pos
-  else render_line_without_cursor buffer absolute_location elt
+  else
+    render_line_without_cursor buffer absolute_location elt show_cursor
 
 let to_image
     (buffer : t)
@@ -453,23 +468,23 @@ let to_image
       buffer.contents
       @ List.map (fun _ -> "") (Util.from 0 (height - l))
   in
+  let buffer_contents =
+    List.map
+      (fun s ->
+        if String.length s < width then
+          s ^ String.make (width - String.length s) ' '
+        else s)
+      buffer_contents
+  in
   let line_nos =
     Util.from 0 (height - 1)
     |> List.map (fun d ->
            I.string A.(bg black ++ st italic) (Printf.sprintf "% 3d " d))
     |> I.vcat
   in
-  let attr =
-    if show_cursor then A.(fg lightwhite ++ bg lightblack) else A.empty
-  in
   let remaining = list_from_nth buffer_contents top_line in
   let superimposed =
     List.mapi (render_line buffer top_line show_cursor) remaining
-(*      (List.map
-         (fun s ->
-           let l = String.length s in
-           if l >= width then s else s ^ String.make (width - l) ' ')
-         remaining)*)
   in
   let widthcropped = I.vcat (List.map (wrap_to width) superimposed) in
   let heightcropped =
