@@ -18,21 +18,24 @@ let empty : t =
     cursor_pos = 0;
     contents = [ "" ];
     cursor_pos_cache = 0;
-    desc = "Empty Buffer";
+    desc = "data/Empty Buffer";
     mark_line = 0;
     mark_pos = 0;
     mark_active = false;
   }
 
 let read_file (file_name : string) =
-  let in_channel = open_in file_name in
-  let rec read_all init =
-    try
-      read_all
-        ((if init = "" then "" else init ^ "\n") ^ input_line in_channel)
-    with End_of_file -> init
-  in
-  read_all ""
+  try
+    let in_channel = open_in file_name in
+    let rec read_all init =
+      try
+        read_all
+          ((if init = "" then "" else init ^ "\n")
+          ^ input_line in_channel)
+      with End_of_file -> init
+    in
+    read_all ""
+  with Sys_error _ -> ""
 
 let from_string s =
   { empty with contents = String.split_on_char '\n' s }
@@ -216,11 +219,124 @@ let toggle_mark (buffer : t) =
     mark_pos = buffer.cursor_pos;
   }
 
+let rec forward_word (buffer : t) =
+  let curr_line = List.nth buffer.contents buffer.cursor_line in
+  if
+    buffer.cursor_pos = String.length curr_line
+    && buffer.cursor_line <> List.length buffer.contents - 1
+  then
+    forward_word
+      {
+        buffer with
+        cursor_line = buffer.cursor_line + 1;
+        cursor_pos = 0;
+      }
+  else
+    match
+      try String.index_from_opt curr_line buffer.cursor_pos ' '
+      with Invalid_argument _ -> failwith "cursor out of bound"
+    with
+    | None -> { buffer with cursor_pos = String.length curr_line }
+    | Some i ->
+        if i = buffer.cursor_pos then
+          forward_word { buffer with cursor_pos = i + 1 }
+        else { buffer with cursor_pos = i }
+
+let rec backward_word (buffer : t) =
+  let curr_line = List.nth buffer.contents buffer.cursor_line in
+  if buffer.cursor_pos = 0 && buffer.cursor_line <> 0 then
+    let cursor_line = buffer.cursor_line - 1 in
+    backward_word
+      {
+        buffer with
+        cursor_line;
+        cursor_pos =
+          List.nth buffer.contents cursor_line |> String.length;
+      }
+  else
+    match
+      try String.rindex_from_opt curr_line (buffer.cursor_pos - 1) ' '
+      with Invalid_argument _ -> failwith "cursor out of bound"
+    with
+    | None -> { buffer with cursor_pos = 0 }
+    | Some i ->
+        if not (i = buffer.cursor_pos - 1) then
+          { buffer with cursor_pos = i + 1 }
+        else backward_word { buffer with cursor_pos = i }
+
+let rec delete_nth_to (buffer : t) n j =
+  match j - buffer.cursor_pos with
+  | 0 -> buffer
+  | m when m < 0 -> raise (Invalid_argument "j")
+  | _ ->
+      let contents = delete_aux n j [] buffer.contents in
+      delete_nth_to { buffer with contents } n (j - 1)
+
+let rec kill_word (buffer : t) =
+  let curr_line = List.nth buffer.contents buffer.cursor_line in
+  if
+    buffer.cursor_pos = String.length curr_line
+    && buffer.cursor_line <> List.length buffer.contents - 1
+  then
+    let cursor_line, cursor_pos = (buffer.cursor_line + 1, 0) in
+    kill_word (delete { buffer with cursor_line; cursor_pos })
+  else
+    match
+      try String.index_from_opt curr_line buffer.cursor_pos ' '
+      with Invalid_argument _ -> failwith "cursor out of bound"
+    with
+    | None ->
+        delete_nth_to buffer buffer.cursor_line
+        @@ String.length curr_line
+    | Some i ->
+        if i <> buffer.cursor_pos then
+          delete_nth_to buffer buffer.cursor_line i
+        else
+          delete_nth_to buffer buffer.cursor_line (i + 1) |> kill_word
+
+let rec delete_nth_until (buffer : t) n j =
+  match buffer.cursor_pos - j with
+  | 0 -> buffer
+  | m when m < 0 -> raise (Invalid_argument "j")
+  | _ -> delete_nth_until (delete buffer) n j
+
+let rec bkill_word (buffer : t) =
+  if buffer.cursor_pos = 0 && buffer.cursor_line <> 0 then
+    bkill_word (delete buffer)
+  else
+    let curr_line = List.nth buffer.contents buffer.cursor_line in
+    match
+      try String.rindex_from_opt curr_line (buffer.cursor_pos - 1) ' '
+      with Invalid_argument _ -> failwith "cursor out of bound"
+    with
+    | None -> delete_nth_until buffer buffer.cursor_line 0
+    | Some i ->
+        if not (i = buffer.cursor_pos - 1) then
+          delete_nth_until buffer buffer.cursor_line (i + 1)
+        else delete_nth_until buffer buffer.cursor_line i |> bkill_word
+
+let to_end_of_line (buffer : t) =
+  {
+    buffer with
+    cursor_pos =
+      List.nth buffer.contents buffer.cursor_line |> String.length;
+  }
+
+let to_begin_of_line (buffer : t) = { buffer with cursor_pos = 0 }
+
 let update_on_key (buffer : t) (key : Unescape.key) =
   match key with
   | `Enter, _ -> insert_newline buffer
   | `ASCII 'P', [ `Ctrl ] -> toggle_mark buffer
-  | `ASCII ch, _ -> insert_ascii buffer ch
+  | `ASCII 'f', [ `Meta ] -> forward_word buffer
+  | `ASCII 'b', [ `Meta ] -> backward_word buffer
+  | `ASCII 'd', [ `Meta ] -> kill_word buffer
+  | `Backspace, [ `Meta ] -> bkill_word buffer
+  | `ASCII 'E', [ `Ctrl ] -> to_end_of_line buffer
+  | `ASCII 'A', [ `Ctrl ] -> to_begin_of_line buffer
+  | `ASCII ch, [] -> insert_ascii buffer ch
+  (* | `ASCII c, [ `Meta ] -> insert_ascii (insert_ascii buffer c)
+     'X' *)
   | `Backspace, _ | `Delete, _ -> delete buffer
   | `Arrow direxn, _ -> mv_cursor buffer direxn
   | _ -> buffer
@@ -239,7 +355,7 @@ let wrap_to width img =
 let cursor_icon = " "
 
 let cursor_image width =
-  I.void width 1 <|> I.string A.(bg lightblack) cursor_icon
+  I.void width 1 <|> I.string A.(bg lightcyan ++ st blink) cursor_icon
 
 let modeline_to_image (buffer : t) (width : int) =
   I.string
@@ -329,12 +445,44 @@ let to_image
     ((width, height) : int * int)
     (show_cursor : bool) =
   let height = height - 1 in
-  let remaining = list_from_nth buffer.contents top_line in
+  let width = width - 5 in
+  let buffer_contents =
+    let l = List.length buffer.contents in
+    if l >= height then buffer.contents
+    else
+      buffer.contents
+      @ List.map (fun _ -> "") (Util.from 0 (height - l))
+  in
+  let line_nos =
+    Util.from 0 (height - 1)
+    |> List.map (fun d ->
+           I.string A.(bg black ++ st italic) (Printf.sprintf "% 3d " d))
+    |> I.vcat
+  in
+  let attr =
+    if show_cursor then A.(fg lightwhite ++ bg lightblack) else A.empty
+  in
+  let remaining = list_from_nth buffer_contents top_line in
   let superimposed =
     List.mapi (render_line buffer top_line show_cursor) remaining
+(*      (List.map
+         (fun s ->
+           let l = String.length s in
+           if l >= width then s else s ^ String.make (width - l) ' ')
+         remaining)*)
   in
   let widthcropped = I.vcat (List.map (wrap_to width) superimposed) in
   let heightcropped =
     I.vcrop 0 (I.height widthcropped - height) widthcropped
   in
-  heightcropped <-> modeline_to_image buffer width
+  line_nos <|> heightcropped <-> modeline_to_image buffer width
+
+let ocaml_format (buffer : t) =
+  let temp_path = "data/_temp.autoformat" in
+  let out_channel = open_out temp_path in
+  let _ = Printf.fprintf out_channel "%s\n" (to_string buffer) in
+  close_out out_channel;
+  let _ = Sys.command ("ocamlformat --inplace " ^ temp_path) in
+  let new_buffer = from_file temp_path in
+  let _ = Sys.command ("rm " ^ temp_path) in
+  { new_buffer with desc = buffer.desc }

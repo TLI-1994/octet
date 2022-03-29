@@ -23,3 +23,9 @@ let length_of_nth lst n = List.nth lst n |> String.length
     Raises: [Invalid_argument] if [n >= String.length s] *)
 let delete_nth s n =
   String.sub s 0 n ^ String.sub s (n + 1) (String.length s - n - 1)
+
+let from i j =
+  let rec from_aux i j l =
+    if i > j then l else from_aux i (j - 1) (j :: l)
+  in
+  from_aux i j []

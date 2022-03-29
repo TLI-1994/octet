@@ -24,3 +24,6 @@ val buffer_contents : t -> string list
 (** [buffer_contents buffer] is the contents of [buffer]. *)
 (*TODO: remove this function when the implementation of to_image is
   complete.*)
+
+val ocaml_format : t -> t
+(** [ocaml_format buffer] is the buffer with the ocaml format applied. *)
