@@ -2,11 +2,10 @@
 
 To install dependencies run
 
-`opam switch --switch octet import ./requirements`
-
-followed by
-
-`opam switch octet`
+```
+opam switch --switch octet import ./requirements
+opam switch octet
+```
 
 Currently available key bindings:
 
@@ -22,4 +21,4 @@ Currently available key bindings:
     C-x C-b             Switch to minibuffer
     C-x C-n             Execute command in the minibuffer
     C-x C-c             Quit
-    C-p                 Highlight text
+    C-p                 Set mark (to highlight text)
