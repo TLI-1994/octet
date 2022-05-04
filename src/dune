@@ -8,6 +8,16 @@
  (libraries notty notty.unix util))
 
 (library
+ (name gapbuffer)
+ (modules gapbuffer)
+ (libraries util))
+
+(library
+ (name bytebuffer)
+ (modules bytebuffer)
+ (libraries util))
+
+(library
  (name orender)
  (modules orender)
  (libraries notty notty.unix obuffer))
