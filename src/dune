@@ -10,12 +10,12 @@
 (library
  (name gapbuffer)
  (modules gapbuffer)
- (libraries util))
+ (libraries util obuffer))
 
 (library
  (name bytebuffer)
  (modules bytebuffer)
- (libraries util))
+ (libraries util obuffer))
 
 (library
  (name orender)
