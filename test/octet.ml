@@ -51,8 +51,8 @@ module type MUT_BUFFER_TEST_ENV = sig
     t -> (buffer_op * string * string) list -> test list
   (** [make_sequence_test buf ops] creates a list of OUnit tests that
       executes each of the steps in order. Each test is specified by an
-      action and the expected contents to the left and right of the
-      cursor after this action. *)
+      action and the expected buffer contents to the left and right of
+      the cursor after this action. *)
 end
 
 module TestEnv_of_Buffer (Buffer : Obuffer.MUT_BUFFER) :
@@ -145,15 +145,30 @@ module Buffer_Tests (Buffer : Obuffer.MUT_BUFFER) : Tests = struct
     make_sequence_test (make "abcd" 3)
       [
         (Read, "abcd", "");
+        (Right, "abcd", "");
         (Insert 'i', "abcdi", "");
         (Insert 'j', "abcdij", "");
         (Left, "abcdi", "j");
         (Left, "abcd", "ij");
         (Insert 'k', "abcdk", "ij");
         (Read, "abcdk", "ij");
-        (Insert 'l', "abcdkl", "ij");
-        (Left, "abcdk", "lij");
+        (Insert 'm', "abcdkm", "ij");
+        (Insert 'l', "abcdkml", "ij");
+        (Left, "abcdkm", "lij");
+        (Delete, "abcdk", "lij");
         (Left, "abcd", "klij");
+        (Left, "abc", "dklij");
+        (Left, "ab", "cdklij");
+        (Left, "a", "bcdklij");
+        (Left, "", "abcdklij");
+        (Right, "a", "bcdklij");
+        (Right, "ab", "cdklij");
+        (Right, "abc", "dklij");
+        (Right, "abcd", "klij");
+        (Right, "abcdk", "lij");
+        (Right, "abcdkl", "ij");
+        (Right, "abcdkli", "j");
+        (Right, "abcdklij", "");
       ]
 
   let tests = List.flatten [ basic_tests; sequence_test ]
@@ -216,7 +231,6 @@ let util_tests =
 
 let tests =
   "test suite for project"
-  >::: List.flatten
-         [ BytebufferTests.tests; GapbufferTests.tests; util_tests ]
+  >::: List.flatten [ BytebufferTests.tests; util_tests ]
 
 let _ = run_test_tt_main tests

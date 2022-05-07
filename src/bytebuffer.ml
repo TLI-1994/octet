@@ -51,7 +51,7 @@ let right buf =
     if buf.l_pos + 1 >= Bytes.length buf.contents_L then resize_left buf
     else ();
     Bytes.set buf.contents_L buf.l_pos
-      (Bytes.get buf.contents_R (buf.r_pos + 1));
+      (Bytes.get buf.contents_R buf.r_pos);
     buf.l_pos <- buf.l_pos + 1;
     buf.r_pos <- buf.r_pos + 1
   end

@@ -10,12 +10,16 @@
 (library
  (name gapbuffer)
  (modules gapbuffer)
- (libraries util obuffer))
+ (libraries util obuffer)
+ (instrumentation
+  (backend bisect_ppx)))
 
 (library
  (name bytebuffer)
  (modules bytebuffer)
- (libraries util obuffer))
+ (libraries util obuffer)
+ (instrumentation
+  (backend bisect_ppx)))
 
 (library
  (name orender)
