@@ -16,11 +16,30 @@ module type MUT_BUFFER_TEST_ENV = sig
   include Obuffer.MUT_BUFFER
 
   val buffer_string_test : string -> string -> t -> test
-  val insert_buffer_test : string -> char -> string -> t -> test
-  val left_buffer_test : string -> string -> t -> OUnitTest.test
-  val right_buffer_test : string -> string -> t -> OUnitTest.test
-  val delete_buffer_test : string -> string -> t -> OUnitTest.test
+  (** [buffer_string_test name expected buf] creates an OUnit test with
+      label [name] to assert that the contents of [buf] match [expected] *)
 
+  val insert_buffer_test : string -> char -> string -> t -> test
+  (** [insert_buffer_test name c expected buf] creates an OUnit test
+      with label [name] which inserts [c] into [buf] and checks that the
+      contents match [expected] *)
+
+  val left_buffer_test : string -> string -> t -> OUnitTest.test
+  (** [left_buffer_test name expected buf] creates an OUnit test with
+      label [name] which moves the cursor of [buf] to the left and
+      checks that the contents match [expected] *)
+
+  val right_buffer_test : string -> string -> t -> OUnitTest.test
+  (** [right_buffer_test name expected buf] creates an OUnit test with
+      label [name] which moves the cursor of [buf] to the right and
+      checks that the contents match [expected] *)
+
+  val delete_buffer_test : string -> string -> t -> OUnitTest.test
+  (** [delete_buffer_test name expected buf] creates an OUnit test with
+      label [name] which deletes the character at the cursor of [buf] to
+      and checks that the contents match [expected] *)
+
+  (** operations that can be done in a series of tests *)
   type buffer_op =
     | Read
     | Left
@@ -28,12 +47,12 @@ module type MUT_BUFFER_TEST_ENV = sig
     | Insert of char
     | Delete
 
-  val insert_test : string -> string -> int -> char -> string -> test
-  val split_test : string -> string -> int -> string list -> test
-  val delete_test : string -> string -> int -> string -> test
-
   val make_sequence_test :
     t -> (buffer_op * string * string) list -> test list
+  (** [make_sequence_test buf ops] creates a list of OUnit tests that
+      executes each of the steps in order. Each test is specified by an
+      action and the expected contents to the left and right of the
+      cursor after this action. *)
 end
 
 module TestEnv_of_Buffer (Buffer : Obuffer.MUT_BUFFER) :
@@ -95,37 +114,6 @@ module TestEnv_of_Buffer (Buffer : Obuffer.MUT_BUFFER) :
     | Insert of char
     | Delete
 
-  let insert_test
-      (name : string)
-      (input_line : string)
-      (i : int)
-      (c : char)
-      (expected_output : string) : test =
-    name >:: fun _ ->
-    assert_equal expected_output
-      (insert_at_n input_line i c)
-      ~printer:String.escaped
-
-  let split_test
-      (name : string)
-      (input_line : string)
-      (i : int)
-      (expected_output : string list) : test =
-    name >:: fun _ ->
-    assert_equal expected_output
-      (split_at_n input_line i)
-      ~printer:string_of_string_list
-
-  let delete_test
-      (name : string)
-      (input_line : string)
-      (i : int)
-      (expected_output : string) : test =
-    name >:: fun _ ->
-    assert_equal expected_output
-      (delete_nth input_line i)
-      ~printer:String.escaped
-
   let make_sequence_test buf steps =
     List.mapi
       (fun i (op, e1, e2) ->
@@ -153,27 +141,6 @@ module Buffer_Tests (Buffer : Obuffer.MUT_BUFFER) : Tests = struct
       delete_buffer_test "delete to get \"ab\"" "ab" buf;
     ]
 
-  let util_tests =
-    [
-      insert_test "insert at start of string" "hello world" 0 'g'
-        "ghello world";
-      insert_test "insert into empty string" "" 0 'g' "g";
-      insert_test "insert into newline-terminated string"
-        "hello world\n" 5 't' "hellot world\n";
-      insert_test "insert into end of newline-terminated string"
-        "hello world\n" 11 '!' "hello world!\n";
-      split_test "split in middle of string" "hello world" 5
-        [ "hello"; " world" ];
-      split_test "split at beginning of string" "hello world" 0
-        [ ""; "hello world" ];
-      split_test "split at end of string" "hello world" 11
-        [ "hello world"; "" ];
-      split_test "split empty string" "" 0 [ ""; "" ];
-      delete_test "delete single-char string" "0" 0 "";
-      delete_test "delete middle of string" "abcd" 1 "acd";
-      delete_test "delete end of string" "abcd" 3 "abc";
-    ]
-
   let sequence_test =
     make_sequence_test (make "abcd" 3)
       [
@@ -189,14 +156,67 @@ module Buffer_Tests (Buffer : Obuffer.MUT_BUFFER) : Tests = struct
         (Left, "abcd", "klij");
       ]
 
-  let tests = List.flatten [ basic_tests; util_tests; sequence_test ]
+  let tests = List.flatten [ basic_tests; sequence_test ]
 end
 
 module BytebufferTests = Buffer_Tests (Bytebuffer)
 module GapbufferTests = Buffer_Tests (Gapbuffer)
 
+let insert_test
+    (name : string)
+    (input_line : string)
+    (i : int)
+    (c : char)
+    (expected_output : string) : test =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (insert_at_n input_line i c)
+    ~printer:String.escaped
+
+let split_test
+    (name : string)
+    (input_line : string)
+    (i : int)
+    (expected_output : string list) : test =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (split_at_n input_line i)
+    ~printer:string_of_string_list
+
+let delete_test
+    (name : string)
+    (input_line : string)
+    (i : int)
+    (expected_output : string) : test =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (delete_nth input_line i)
+    ~printer:String.escaped
+
+let util_tests =
+  [
+    insert_test "insert at start of string" "hello world" 0 'g'
+      "ghello world";
+    insert_test "insert into empty string" "" 0 'g' "g";
+    insert_test "insert into newline-terminated string" "hello world\n"
+      5 't' "hellot world\n";
+    insert_test "insert into end of newline-terminated string"
+      "hello world\n" 11 '!' "hello world!\n";
+    split_test "split in middle of string" "hello world" 5
+      [ "hello"; " world" ];
+    split_test "split at beginning of string" "hello world" 0
+      [ ""; "hello world" ];
+    split_test "split at end of string" "hello world" 11
+      [ "hello world"; "" ];
+    split_test "split empty string" "" 0 [ ""; "" ];
+    delete_test "delete single-char string" "0" 0 "";
+    delete_test "delete middle of string" "abcd" 1 "acd";
+    delete_test "delete end of string" "abcd" 3 "abc";
+  ]
+
 let tests =
   "test suite for project"
-  >::: List.flatten [ BytebufferTests.tests; GapbufferTests.tests ]
+  >::: List.flatten
+         [ BytebufferTests.tests; GapbufferTests.tests; util_tests ]
 
 let _ = run_test_tt_main tests
