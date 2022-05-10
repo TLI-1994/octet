@@ -20,6 +20,7 @@ module GapBuffer = struct
 
   let make str len =
     let num_of_char = String.length str in
+    let len = max (num_of_char + 1) len in
     let main_array =
       Array.init len (fun i ->
           if i < num_of_char then String.get str i else '_')
@@ -116,23 +117,30 @@ module GapBuffer = struct
   let delete gb =
     if gb.gap_left <> 0 then delete_at_pos gb (gb.gap_left - 1) else ()
 
-  (* let string_of_buffer gb = let output = ref "" in for i = 0 to
-     Array.length gb.main_array - 1 do if i >= gb.gap_left && i <=
-     gb.gap_right then output := !output ^ Char.escaped '=' else output
-     := !output ^ Char.escaped gb.main_array.(i) done; !output *)
+  let string_of_buffer gb =
+    let output = ref "" in
+    for i = 0 to Array.length gb.main_array - 1 do
+      if i >= gb.gap_left && i <= gb.gap_right then
+        output := !output ^ Char.escaped '='
+      else output := !output ^ Char.escaped gb.main_array.(i)
+    done;
+    !output
 end
 
 (* open GapBuffer
 
-   let () = (* let gb = init 10 3 in *) let gb = make "yes we can" 15 in
-   for i = 0 to 30 do insert gb (char_of_int ((i mod 26) + int_of_char
-   'a')); (* print_endline (string_of_buffer gb); *) print_endline
-   (to_string gb) done; for i = 0 to 10 do left gb; (* print_endline
+   let () = (* let gb = init 10 3 in *) let gb = make "abcd" 5 in right
+   gb; print_endline (to_string gb); insert gb 'i'; print_endline
+   (to_string gb); insert gb 'j'; print_endline (to_string gb); left gb;
+   print_endline (to_string gb) (* for i = 0 to 30 do insert gb
+   (char_of_int ((i mod 26) + int_of_char 'a')); (* print_endline
+   (string_of_buffer gb); *) print_endline (string_of_buffer gb) done;
+   for i = 0 to 10 do left gb; (* print_endline (string_of_buffer gb);
+   *) print_endline (to_string gb) done; for i = 0 to 10 do delete gb;
+   (* print_endline (string_of_buffer gb); *) print_endline (to_string
+   gb) done; for i = 0 to 20 do right gb; (* print_endline
    (string_of_buffer gb); *) print_endline (to_string gb) done; for i =
-   0 to 10 do delete gb; (* print_endline (string_of_buffer gb); *)
-   print_endline (to_string gb) done; for i = 0 to 20 do right gb; (*
-   print_endline (string_of_buffer gb); *) print_endline (to_string gb)
-   done; for i = 0 to 40 do left gb; (* print_endline (string_of_buffer
-   gb); *) print_endline (to_string gb) done; for i = 0 to 40 do insert
-   gb (char_of_int ((i mod 26) + int_of_char 'a')); (* print_endline
-   (string_of_buffer gb); *) print_endline (to_string gb) done *)
+   0 to 40 do left gb; (* print_endline (string_of_buffer gb); *)
+   print_endline (to_string gb) done; for i = 0 to 40 do insert gb
+   (char_of_int ((i mod 26) + int_of_char 'a')); (* print_endline
+   (string_of_buffer gb); *) print_endline (to_string gb) done *) *)
