@@ -12,6 +12,8 @@ let main =
   and loop t state =
     match Term.event t with
     | `Key (`ASCII 'N', [ `Ctrl ]) -> update t (autoformat state)
+    | `Key (`ASCII 'P', [ `Ctrl ]) ->
+        update t (paste_from_clipboard state)
     | `Key (`ASCII 'X', [ `Ctrl ]) -> (
         match Term.event t with
         | `Key (`ASCII 'B', [ `Ctrl ]) -> update t (minibuffer_on state)

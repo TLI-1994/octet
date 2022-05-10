@@ -1,0 +1,12 @@
+let rec paste_from_clipboard (buffer : t) =
+  let temp_path = "data/_temp.clipboard" in
+  let _ = Sys.command ("rm -rf " ^ temp_path) in
+  let _ = Sys.command ("touch " ^ temp_path) in
+  let _ = Sys.command ("pbpaste > " ^ temp_path) in
+  let s = read_file temp_path in
+  let num_of_char = String.length s in
+  let clst =
+    List.init num_of_char (fun i ->
+        if i < num_of_char then String.get s i else '_')
+  in
+  insert_ascii_list buffer clst
