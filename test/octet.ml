@@ -161,6 +161,7 @@ module Buffer_Tests (Buffer : Obuffer.MUT_BUFFER) : Tests = struct
         (Left, "ab", "cdklij");
         (Left, "a", "bcdklij");
         (Left, "", "abcdklij");
+        (Left, "", "abcdklij");
         (Right, "a", "bcdklij");
         (Right, "ab", "cdklij");
         (Right, "abc", "dklij");
