@@ -231,6 +231,7 @@ let util_tests =
 
 let tests =
   "test suite for project"
-  >::: List.flatten [ BytebufferTests.tests; util_tests ]
+  >::: List.flatten
+         [ BytebufferTests.tests; GapbufferTests.tests; util_tests ]
 
 let _ = run_test_tt_main tests
