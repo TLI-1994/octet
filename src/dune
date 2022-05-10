@@ -5,12 +5,12 @@
 (library
  (name obuffer)
  (modules obuffer)
- (libraries notty notty.unix util))
+ (libraries notty notty.unix util orender))
 
 (library
  (name orender)
  (modules orender)
- (libraries notty notty.unix obuffer))
+ (libraries notty notty.unix))
 
 (library
  (name buffermanager)

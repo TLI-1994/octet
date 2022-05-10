@@ -1,6 +1,6 @@
 open Notty
 
-type labels =
+type label =
   | Keyword of string
   | Symbol of string
   | Number of string
@@ -159,5 +159,38 @@ let label_to_image = function
   | Number w -> I.string A.(fg green ++ bg black) w
   | Other w -> I.string A.(fg white ++ bg black) w
 
-let image_of_string s =
-  char_tags_of_string s |> List.map label_to_image |> I.hcat
+let label_to_image_hl_cursor hl cursor label =
+  if cursor then
+    match label with
+    | Keyword w -> I.string A.(fg yellow ++ bg white) w
+    | Symbol w -> I.string A.(fg red ++ bg white) w
+    | Number w -> I.string A.(fg green ++ bg white) w
+    | Other w -> I.string A.(fg white ++ bg white) w
+  else if hl then
+    match label with
+    | Keyword w -> I.string A.(fg yellow ++ bg blue) w
+    | Symbol w -> I.string A.(fg red ++ bg blue) w
+    | Number w -> I.string A.(fg green ++ bg blue) w
+    | Other w -> I.string A.(fg white ++ bg blue) w
+  else label_to_image label
+
+let image_of_string hl_opt cursor_opt s =
+  let tagged = char_tags_of_string s in
+  let imlist =
+    match (hl_opt, cursor_opt) with
+    | None, None ->
+        tagged |> List.map (label_to_image_hl_cursor false false)
+    | None, Some loc ->
+        tagged
+        |> List.mapi (fun i ->
+               label_to_image_hl_cursor false (i == loc))
+    | Some (st, en), None ->
+        tagged
+        |> List.mapi (fun i ->
+               label_to_image_hl_cursor (i >= st && i <= en) false)
+    | Some (st, en), Some loc ->
+        tagged
+        |> List.mapi (fun i ->
+               label_to_image_hl_cursor (i >= st && i <= en) (i == loc))
+  in
+  imlist |> I.hcat
