@@ -8,6 +8,13 @@
  (libraries notty notty.unix util))
 
 (library
+ (name filebuffer)
+ (modules filebuffer)
+ (libraries util gapbuffer bytebuffer)
+ (instrumentation
+  (backend bisect_ppx)))
+
+(library
  (name gapbuffer)
  (modules gapbuffer)
  (libraries util obuffer)
