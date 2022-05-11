@@ -1,3 +1,5 @@
 (test
  (name octet)
- (libraries ounit2 obuffer))
+ (libraries ounit2 obuffer bytebuffer gapbuffer filebuffer)
+ (instrumentation
+  (backend bisect_ppx)))

@@ -8,6 +8,27 @@
  (libraries notty notty.unix util))
 
 (library
+ (name filebuffer)
+ (modules filebuffer)
+ (libraries util gapbuffer bytebuffer)
+ (instrumentation
+  (backend bisect_ppx)))
+
+(library
+ (name gapbuffer)
+ (modules gapbuffer)
+ (libraries util obuffer)
+ (instrumentation
+  (backend bisect_ppx)))
+
+(library
+ (name bytebuffer)
+ (modules bytebuffer)
+ (libraries util obuffer)
+ (instrumentation
+  (backend bisect_ppx)))
+
+(library
  (name orender)
  (modules orender)
  (libraries notty notty.unix obuffer))
