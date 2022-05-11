@@ -7,11 +7,11 @@ module type MUT_FILEBUFFER = sig
   val to_image : t -> int -> int * int -> bool -> Notty.I.t
   val to_string : t -> string
   val contents : t -> string list
-  val ocaml_format : t -> t
+  val ocaml_format : t -> unit
+  val insert_char : t -> char -> unit
 end
 
-module MutBuffer (LineBuffer : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER =
-struct
+module Make (LineBuffer : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER = struct
   type t = {
     front : LineBuffer.t list;
     back : LineBuffer.t list;
@@ -31,12 +31,17 @@ struct
 
   let empty () =
     {
-      front = [];
+      front = [ LineBuffer.make "" 3 ];
       back = [];
       cursor_pos = 0;
       cursor_pos_cache = 0;
       desc = "data/Empty Buffer";
     }
+
+  let insert_char fb c =
+    match fb.front with
+    | h :: _ -> LineBuffer.insert h c
+    | [] -> failwith "no front buffer?"
 
   let contents fb =
     List.rev_append fb.back fb.front (* line buffers in reverse order *)

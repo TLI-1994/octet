@@ -232,11 +232,40 @@ module UtilTests : Tests = struct
     ]
 end
 
+module FilebufferTests : Tests = struct
+  module Filebuffer = Filebuffer.Make (Bytebuffer)
+
+  let contents_test name expected fb =
+    name >:: fun _ ->
+    assert_equal expected
+      (Filebuffer.contents fb)
+      ~printer:(Util.string_of_list String.escaped)
+
+  let insert_test name c expected fb =
+    name >:: fun _ ->
+    assert_equal expected
+      (Filebuffer.insert_char fb c;
+       Filebuffer.contents fb)
+      ~printer:(Util.string_of_list String.escaped)
+
+  let fb = Filebuffer.empty ()
+
+  let tests =
+    [
+      contents_test "empty buffer has no contents" [ "" ] fb;
+      insert_test "insert first character into buffer" 'a' [ "a" ] fb;
+      insert_test "insert second character into buffer" 'b' [ "ab" ] fb;
+    ]
+end
+
 let tests =
   "test suite for project"
   >::: List.flatten
          [
-           BytebufferTests.tests; GapbufferTests.tests; UtilTests.tests;
+           BytebufferTests.tests;
+           GapbufferTests.tests;
+           UtilTests.tests;
+           FilebufferTests.tests;
          ]
 
 let _ = run_test_tt_main tests
