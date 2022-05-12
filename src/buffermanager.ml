@@ -126,6 +126,17 @@ let rec write_all = function
   | Leaf r -> Obuffer.write_to_file r.buffer
   | Minibuffer _ -> ()
 
+let rec paste_from_clipboard = function
+  | Hsplit (t1, t2) ->
+      Hsplit (paste_from_clipboard t1, paste_from_clipboard t2)
+  | Vsplit (t1, t2) ->
+      Vsplit (paste_from_clipboard t1, paste_from_clipboard t2)
+  | Leaf r ->
+      if r.active then
+        Leaf { r with buffer = Obuffer.paste_from_clipboard r.buffer }
+      else Leaf r
+  | Minibuffer _ as m -> m
+
 let ( <-> ) bm1 bm2 = Hsplit (bm1, bm2)
 let ( <|> ) bm1 bm2 = Vsplit (bm1, bm2)
 

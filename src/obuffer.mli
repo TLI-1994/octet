@@ -27,3 +27,5 @@ val buffer_contents : t -> string list
 
 val ocaml_format : t -> t
 (** [ocaml_format buffer] is the buffer with the ocaml format applied. *)
+
+val paste_from_clipboard : t -> t

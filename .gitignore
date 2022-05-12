@@ -4,3 +4,7 @@ octet.zip
 *#
 input.txt
 Empty Buffer
+*.coverage
+*.js
+*.html
+*.css

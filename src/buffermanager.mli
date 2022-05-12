@@ -27,6 +27,8 @@ val autoformat : t -> t
 val write_all : t -> unit
 (** write all buffer contents to files *)
 
+val paste_from_clipboard : t -> t
+
 val ( <-> ) : t -> t -> t
 (** vertically stack buffers *)
 
