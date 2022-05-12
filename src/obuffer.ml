@@ -504,18 +504,20 @@ let ocaml_format (buffer : t) =
 
 let rec paste_from_clipboard (buffer : t) =
   let temp_path = "data/_temp.clipboard" in
-  let _ = Sys.command ("rm -rf " ^ temp_path) in
-  let _ = Sys.command ("touch " ^ temp_path) in
-  let _ = Sys.command ("pbpaste > " ^ temp_path) in
+  Sys.command ("rm -rf " ^ temp_path) |> ignore;
+  Sys.command ("touch " ^ temp_path) |> ignore;
+  Sys.command ("pbpaste > " ^ temp_path) |> ignore;
   let s = read_file temp_path in
   let num_of_char = String.length s in
   let clst =
     List.init num_of_char (fun i ->
         if i < num_of_char then String.get s i else '_')
   in
-  insert_ascii_list buffer clst
+  Sys.command ("rm " ^ temp_path) |> ignore;
+  insert_stream buffer clst
 
-and insert_ascii_list (buffer : t) (lst : char list) =
+and insert_stream (buffer : t) (lst : char list) =
   match lst with
   | [] -> buffer
-  | h :: t -> insert_ascii_list (insert_ascii buffer h) t
+  | '\n' :: t -> insert_stream (insert_newline buffer) t
+  | h :: t -> insert_stream (insert_ascii buffer h) t
