@@ -161,6 +161,7 @@ module Buffer_Tests (Buffer : Obuffer.MUT_BUFFER) : Tests = struct
         (Left, "ab", "cdklij");
         (Left, "a", "bcdklij");
         (Left, "", "abcdklij");
+        (Left, "", "abcdklij");
         (Right, "a", "bcdklij");
         (Right, "ab", "cdklij");
         (Right, "abc", "dklij");
@@ -177,61 +178,94 @@ end
 module BytebufferTests = Buffer_Tests (Bytebuffer)
 module GapbufferTests = Buffer_Tests (Gapbuffer)
 
-let insert_test
-    (name : string)
-    (input_line : string)
-    (i : int)
-    (c : char)
-    (expected_output : string) : test =
-  name >:: fun _ ->
-  assert_equal expected_output
-    (insert_at_n input_line i c)
-    ~printer:String.escaped
+module UtilTests : Tests = struct
+  let insert_test
+      (name : string)
+      (input_line : string)
+      (i : int)
+      (c : char)
+      (expected_output : string) : test =
+    name >:: fun _ ->
+    assert_equal expected_output
+      (insert_at_n input_line i c)
+      ~printer:String.escaped
 
-let split_test
-    (name : string)
-    (input_line : string)
-    (i : int)
-    (expected_output : string list) : test =
-  name >:: fun _ ->
-  assert_equal expected_output
-    (split_at_n input_line i)
-    ~printer:string_of_string_list
+  let split_test
+      (name : string)
+      (input_line : string)
+      (i : int)
+      (expected_output : string list) : test =
+    name >:: fun _ ->
+    assert_equal expected_output
+      (split_at_n input_line i)
+      ~printer:string_of_string_list
 
-let delete_test
-    (name : string)
-    (input_line : string)
-    (i : int)
-    (expected_output : string) : test =
-  name >:: fun _ ->
-  assert_equal expected_output
-    (delete_nth input_line i)
-    ~printer:String.escaped
+  let delete_test
+      (name : string)
+      (input_line : string)
+      (i : int)
+      (expected_output : string) : test =
+    name >:: fun _ ->
+    assert_equal expected_output
+      (delete_nth input_line i)
+      ~printer:String.escaped
 
-let util_tests =
-  [
-    insert_test "insert at start of string" "hello world" 0 'g'
-      "ghello world";
-    insert_test "insert into empty string" "" 0 'g' "g";
-    insert_test "insert into newline-terminated string" "hello world\n"
-      5 't' "hellot world\n";
-    insert_test "insert into end of newline-terminated string"
-      "hello world\n" 11 '!' "hello world!\n";
-    split_test "split in middle of string" "hello world" 5
-      [ "hello"; " world" ];
-    split_test "split at beginning of string" "hello world" 0
-      [ ""; "hello world" ];
-    split_test "split at end of string" "hello world" 11
-      [ "hello world"; "" ];
-    split_test "split empty string" "" 0 [ ""; "" ];
-    delete_test "delete single-char string" "0" 0 "";
-    delete_test "delete middle of string" "abcd" 1 "acd";
-    delete_test "delete end of string" "abcd" 3 "abc";
-  ]
+  let tests =
+    [
+      insert_test "insert at start of string" "hello world" 0 'g'
+        "ghello world";
+      insert_test "insert into empty string" "" 0 'g' "g";
+      insert_test "insert into newline-terminated string"
+        "hello world\n" 5 't' "hellot world\n";
+      insert_test "insert into end of newline-terminated string"
+        "hello world\n" 11 '!' "hello world!\n";
+      split_test "split in middle of string" "hello world" 5
+        [ "hello"; " world" ];
+      split_test "split at beginning of string" "hello world" 0
+        [ ""; "hello world" ];
+      split_test "split at end of string" "hello world" 11
+        [ "hello world"; "" ];
+      split_test "split empty string" "" 0 [ ""; "" ];
+      delete_test "delete single-char string" "0" 0 "";
+      delete_test "delete middle of string" "abcd" 1 "acd";
+      delete_test "delete end of string" "abcd" 3 "abc";
+    ]
+end
+
+module FilebufferTests : Tests = struct
+  module Filebuffer = Filebuffer.Make (Bytebuffer)
+
+  let contents_test name expected fb =
+    name >:: fun _ ->
+    assert_equal expected
+      (Filebuffer.contents fb)
+      ~printer:(Util.string_of_list String.escaped)
+
+  let insert_test name c expected fb =
+    name >:: fun _ ->
+    assert_equal expected
+      (Filebuffer.insert_char fb c;
+       Filebuffer.contents fb)
+      ~printer:(Util.string_of_list String.escaped)
+
+  let fb = Filebuffer.empty ()
+
+  let tests =
+    [
+      contents_test "empty buffer has no contents" [ "" ] fb;
+      insert_test "insert first character into buffer" 'a' [ "a" ] fb;
+      insert_test "insert second character into buffer" 'b' [ "ab" ] fb;
+    ]
+end
 
 let tests =
   "test suite for project"
   >::: List.flatten
-         [ BytebufferTests.tests; GapbufferTests.tests; util_tests ]
+         [
+           BytebufferTests.tests;
+           GapbufferTests.tests;
+           UtilTests.tests;
+           FilebufferTests.tests;
+         ]
 
 let _ = run_test_tt_main tests
