@@ -106,3 +106,11 @@ let insert gb c = insert_string gb (Char.escaped c) gb.gap_left
 
 let delete gb =
   if gb.gap_left <> 0 then delete_at_pos gb (gb.gap_left - 1) else ()
+
+let left_to gb pos =
+  let pos = max 0 pos in
+  mv_left gb pos
+
+let right_to gb pos =
+  let pos = min gb.num_of_char pos in
+  mv_right gb pos
