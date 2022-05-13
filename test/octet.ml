@@ -233,7 +233,7 @@ module UtilTests : Tests = struct
 end
 
 module FilebufferTests : Tests = struct
-  module Filebuffer = Filebuffer.Make (Bytebuffer)
+  module Filebuffer = Filebuffer.Make (Gapbuffer)
 
   let contents_test name expected fb =
     name >:: fun _ ->
@@ -255,6 +255,30 @@ module FilebufferTests : Tests = struct
        Filebuffer.contents fb)
       ~printer:(Util.string_of_list String.escaped)
 
+  let rec mv_up_test name c n expected fb =
+    name >:: fun _ ->
+    assert_equal expected
+      (mv_up_n fb n;
+       Filebuffer.insert_char fb c |> ignore;
+       Filebuffer.contents fb)
+      ~printer:(Util.string_of_list String.escaped)
+
+  and mv_up_n fb = function
+    | 0 -> ()
+    | n -> mv_up_n (Filebuffer.mv_up fb) (n - 1)
+
+  let rec mv_down_test name c n expected fb =
+    name >:: fun _ ->
+    assert_equal expected
+      (mv_down_n fb n;
+       Filebuffer.insert_char fb c |> ignore;
+       Filebuffer.contents fb)
+      ~printer:(Util.string_of_list String.escaped)
+
+  and mv_down_n fb = function
+    | 0 -> ()
+    | n -> mv_down_n (Filebuffer.mv_down fb) (n - 1)
+
   let fb = Filebuffer.empty ()
 
   let tests =
@@ -265,6 +289,35 @@ module FilebufferTests : Tests = struct
       insert_newline_test "insert new line into buffer" [ "ab"; "" ] fb;
       insert_test "insert second character into buffer" 'c'
         [ "ab"; "c" ] fb;
+      insert_newline_test "insert new line into buffer"
+        [ "ab"; "c"; "" ] fb;
+      insert_test "insert second character into buffer" 'd'
+        [ "ab"; "c"; "d" ] fb;
+      insert_test "insert second character into buffer" 'e'
+        [ "ab"; "c"; "de" ] fb;
+      mv_up_test "insert second character into buffer" 'f' 1
+        [ "ab"; "cf"; "de" ] fb;
+      mv_down_test "insert second character into buffer" 'g' 1
+        [ "ab"; "cf"; "deg" ] fb;
+      mv_down_test "insert second character into buffer" 'h' 100
+        [ "ab"; "cf"; "degh" ] fb;
+      mv_up_test "insert second character into buffer" 'i' 100
+        [ "abi"; "cf"; "degh" ] fb;
+      insert_newline_test "insert new line into buffer"
+        [ "abi"; ""; "cf"; "degh" ]
+        fb;
+      mv_down_test "insert second character into buffer" 'j' 1
+        [ "abi"; ""; "jcf"; "degh" ]
+        fb;
+      mv_down_test "insert second character into buffer" 'k' 1
+        [ "abi"; ""; "jcf"; "dkegh" ]
+        fb;
+      mv_up_test "insert second character into buffer" 'l' 3
+        [ "abli"; ""; "jcf"; "dkegh" ]
+        fb;
+      mv_down_test "insert second character into buffer" 'm' 3
+        [ "abli"; ""; "jcf"; "dkemgh" ]
+        fb;
     ]
 end
 

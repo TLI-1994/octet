@@ -10,6 +10,8 @@ module type MUT_FILEBUFFER = sig
   val ocaml_format : t -> t
   val insert_char : t -> char -> t
   val insert_newline : t -> t
+  val mv_up : t -> t
+  val mv_down : t -> t
 end
 
 module Make (_ : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER

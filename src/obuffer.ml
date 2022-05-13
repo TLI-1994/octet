@@ -25,11 +25,8 @@ module type MUT_BUFFER = sig
   val right : t -> unit
   (** move the cursor right *)
 
-  val left_to : t -> int -> unit
-  (** move the cursor left to a given position *)
-
-  val right_to : t -> int -> unit
-  (** move the cursor right to a given position *)
+  val move_to : t -> int -> unit
+  (** move the cursor to a given position *)
 end
 
 type t = {

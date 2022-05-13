@@ -64,5 +64,4 @@ let to_string (buf : t) : string =
       (Bytes.sub buf.contents_R buf.r_pos
          (Bytes.length buf.contents_R - buf.r_pos))
 
-let left_to _ _ = failwith "unimplemented"
-let right_to _ _ = failwith "unimplemented"
+let move_to _ _ = failwith "unimplemented"

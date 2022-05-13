@@ -10,6 +10,8 @@ module type MUT_FILEBUFFER = sig
   val ocaml_format : t -> t
   val insert_char : t -> char -> t
   val insert_newline : t -> t
+  val mv_up : t -> t
+  val mv_down : t -> t
 end
 
 module Make (LineBuffer : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER = struct
@@ -42,7 +44,10 @@ module Make (LineBuffer : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER = struct
   let insert_char fb c =
     match fb.front with
     | h :: _ ->
+        LineBuffer.move_to h fb.cursor_pos_cache;
         LineBuffer.insert h c;
+        fb.cursor_pos <- fb.cursor_pos + 1;
+        fb.cursor_pos_cache <- fb.cursor_pos;
         fb
     | [] -> failwith "no front buffer?"
 
@@ -51,6 +56,29 @@ module Make (LineBuffer : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER = struct
     fb.cursor_pos <- 0;
     fb.cursor_pos_cache <- 0;
     fb
+
+  let mv_up fb =
+    match fb.front with
+    | [] -> failwith "no front buffer?"
+    | [ _ ] -> fb
+    | h1 :: h2 :: t ->
+        LineBuffer.move_to h2 fb.cursor_pos_cache;
+        fb.front <- h2 :: t;
+        fb.back <- h1 :: fb.back;
+        fb
+
+  let mv_down fb =
+    match fb.back with
+    | [] -> fb
+    | [ x ] ->
+        fb.front <- x :: fb.front;
+        fb.back <- [];
+        fb
+    | h1 :: h2 :: t ->
+        LineBuffer.move_to h1 fb.cursor_pos_cache;
+        fb.front <- h1 :: fb.front;
+        fb.back <- h2 :: t;
+        fb
 
   let contents fb =
     List.rev_append fb.back fb.front (* line buffers in reverse order *)
