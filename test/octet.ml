@@ -244,7 +244,14 @@ module FilebufferTests : Tests = struct
   let insert_test name c expected fb =
     name >:: fun _ ->
     assert_equal expected
-      (Filebuffer.insert_char fb c;
+      (Filebuffer.insert_char fb c |> ignore;
+       Filebuffer.contents fb)
+      ~printer:(Util.string_of_list String.escaped)
+
+  let insert_newline_test name expected fb =
+    name >:: fun _ ->
+    assert_equal expected
+      (Filebuffer.insert_newline fb |> ignore;
        Filebuffer.contents fb)
       ~printer:(Util.string_of_list String.escaped)
 
@@ -255,6 +262,9 @@ module FilebufferTests : Tests = struct
       contents_test "empty buffer has no contents" [ "" ] fb;
       insert_test "insert first character into buffer" 'a' [ "a" ] fb;
       insert_test "insert second character into buffer" 'b' [ "ab" ] fb;
+      insert_newline_test "insert new line into buffer" [ "ab"; "" ] fb;
+      insert_test "insert second character into buffer" 'c'
+        [ "ab"; "c" ] fb;
     ]
 end
 

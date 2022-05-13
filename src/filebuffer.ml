@@ -7,17 +7,18 @@ module type MUT_FILEBUFFER = sig
   val to_image : t -> int -> int * int -> bool -> Notty.I.t
   val to_string : t -> string
   val contents : t -> string list
-  val ocaml_format : t -> unit
-  val insert_char : t -> char -> unit
+  val ocaml_format : t -> t
+  val insert_char : t -> char -> t
+  val insert_newline : t -> t
 end
 
 module Make (LineBuffer : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER = struct
   type t = {
-    front : LineBuffer.t list;
-    back : LineBuffer.t list;
-    cursor_pos : int;
-    cursor_pos_cache : int;
-    desc : string;
+    mutable front : LineBuffer.t list;
+    mutable back : LineBuffer.t list;
+    mutable cursor_pos : int;
+    mutable cursor_pos_cache : int;
+    mutable desc : string;
   }
   (** AF: buffers for the lines in the text file before and including
       the line with the cursor are in [front], in reverse order; buffers
@@ -40,8 +41,16 @@ module Make (LineBuffer : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER = struct
 
   let insert_char fb c =
     match fb.front with
-    | h :: _ -> LineBuffer.insert h c
+    | h :: _ ->
+        LineBuffer.insert h c;
+        fb
     | [] -> failwith "no front buffer?"
+
+  let insert_newline fb =
+    fb.front <- LineBuffer.make "" 3 :: fb.front;
+    fb.cursor_pos <- 0;
+    fb.cursor_pos_cache <- 0;
+    fb
 
   let contents fb =
     List.rev_append fb.back fb.front (* line buffers in reverse order *)
@@ -72,7 +81,20 @@ module Make (LineBuffer : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER = struct
       desc = file_name;
     }
 
-  let write_to_file _ = failwith "unimplemented"
+  let write_to_file buffer path =
+    let out_channel = open_out path in
+    Printf.fprintf out_channel "%s\n" (to_string buffer);
+    close_out out_channel
+
   let to_image _ = failwith "unimplemented"
-  let ocaml_format _ = failwith "unimplemented"
+
+  let ocaml_format (fb : t) =
+    let temp_path = "data/_temp.autoformat" in
+    let out_channel = open_out temp_path in
+    Printf.fprintf out_channel "%s\n" (to_string fb) |> ignore;
+    close_out out_channel;
+    Sys.command ("ocamlformat --inplace " ^ temp_path) |> ignore;
+    let new_buffer = from_file temp_path in
+    Sys.command ("rm " ^ temp_path) |> ignore;
+    { new_buffer with desc = fb.desc }
 end
