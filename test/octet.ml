@@ -317,6 +317,18 @@ module FilebufferTests : Tests = struct
       mv_test "mv right 100" `Right 'q' 100
         [ "abli"; ""; "jcf"; "odpkenmghq" ]
         fb;
+      mv_test "mv left 5" `Left 'r' 5
+        [ "abli"; ""; "jcf"; "odpkernmghq" ]
+        fb;
+      insert_newline_test "insert newline in the middle of a line"
+        [ "abli"; ""; "jcf"; "odpker"; "nmghq" ]
+        fb;
+      insert_test "insert works well after inserting newline" 's'
+        [ "abli"; ""; "jcf"; "odpker"; "snmghq" ]
+        fb;
+      mv_test "mv up works well after inserting newline" `Up 't' 1
+        [ "abli"; ""; "jcf"; "otdpker"; "snmghq" ]
+        fb;
     ]
 end
 

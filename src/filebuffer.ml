@@ -54,10 +54,19 @@ module Make (LineBuffer : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER = struct
     | [] -> failwith "no front buffer?"
 
   let insert_newline fb =
-    fb.front <- LineBuffer.make "" 3 :: fb.front;
-    fb.cursor_pos <- 0;
-    fb.cursor_pos_cache <- 0;
-    fb
+    match fb.front with
+    | [] -> failwith "no front buffer?"
+    | h :: t ->
+        let s = LineBuffer.to_string h in
+        let l =
+          List.map
+            (fun s -> LineBuffer.make s 3)
+            (Util.split_at_n s fb.cursor_pos)
+        in
+        fb.front <- List.rev_append l t;
+        fb.cursor_pos <- 0;
+        fb.cursor_pos_cache <- 0;
+        fb
 
   let mv_up fb =
     match fb.front with
@@ -65,6 +74,8 @@ module Make (LineBuffer : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER = struct
     | [ _ ] -> fb
     | h1 :: h2 :: t ->
         LineBuffer.move_to h2 fb.cursor_pos_cache;
+        fb.cursor_pos <-
+          min fb.cursor_pos_cache (LineBuffer.content_size h2);
         fb.front <- h2 :: t;
         fb.back <- h1 :: fb.back;
         fb
@@ -78,6 +89,8 @@ module Make (LineBuffer : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER = struct
         fb
     | h1 :: h2 :: t ->
         LineBuffer.move_to h1 fb.cursor_pos_cache;
+        fb.cursor_pos <-
+          min fb.cursor_pos_cache (LineBuffer.content_size h1);
         fb.front <- h1 :: fb.front;
         fb.back <- h2 :: t;
         fb
