@@ -15,7 +15,7 @@ run:
 clean:
 	dune clean
 
-doc:
+doc docs:
 	dune build @doc
 
 cloc:

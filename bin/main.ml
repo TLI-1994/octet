@@ -1,4 +1,5 @@
 open Notty_unix
+open Octet
 open Buffermanager
 
 let init_l = Obuffer.from_file "data/input.txt" |> init |> toggle_focus
