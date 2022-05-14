@@ -12,6 +12,8 @@ module type MUT_FILEBUFFER = sig
   val insert_newline : t -> t
   val mv_up : t -> t
   val mv_down : t -> t
+  val mv_left : t -> t
+  val mv_right : t -> t
 end
 
 module Make (_ : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER

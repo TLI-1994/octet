@@ -27,6 +27,9 @@ module type MUT_BUFFER = sig
 
   val move_to : t -> int -> unit
   (** move the cursor to a given position *)
+
+  val content_size : t -> int
+  (** query how many characters are there in a buffer *)
 end
 
 type t = {

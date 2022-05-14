@@ -255,29 +255,24 @@ module FilebufferTests : Tests = struct
        Filebuffer.contents fb)
       ~printer:(Util.string_of_list String.escaped)
 
-  let rec mv_up_test name c n expected fb =
+  let mv_test name direxn c n expected fb =
+    let mv_fun =
+      match direxn with
+      | `Up -> Filebuffer.mv_up
+      | `Down -> Filebuffer.mv_down
+      | `Left -> Filebuffer.mv_left
+      | `Right -> Filebuffer.mv_right
+    in
+    let rec mv_n fb = function
+      | 0 -> ()
+      | n -> mv_n (mv_fun fb) (n - 1)
+    in
     name >:: fun _ ->
     assert_equal expected
-      (mv_up_n fb n;
+      (mv_n fb n;
        Filebuffer.insert_char fb c |> ignore;
        Filebuffer.contents fb)
       ~printer:(Util.string_of_list String.escaped)
-
-  and mv_up_n fb = function
-    | 0 -> ()
-    | n -> mv_up_n (Filebuffer.mv_up fb) (n - 1)
-
-  let rec mv_down_test name c n expected fb =
-    name >:: fun _ ->
-    assert_equal expected
-      (mv_down_n fb n;
-       Filebuffer.insert_char fb c |> ignore;
-       Filebuffer.contents fb)
-      ~printer:(Util.string_of_list String.escaped)
-
-  and mv_down_n fb = function
-    | 0 -> ()
-    | n -> mv_down_n (Filebuffer.mv_down fb) (n - 1)
 
   let fb = Filebuffer.empty ()
 
@@ -287,36 +282,40 @@ module FilebufferTests : Tests = struct
       insert_test "insert first character into buffer" 'a' [ "a" ] fb;
       insert_test "insert second character into buffer" 'b' [ "ab" ] fb;
       insert_newline_test "insert new line into buffer" [ "ab"; "" ] fb;
-      insert_test "insert second character into buffer" 'c'
-        [ "ab"; "c" ] fb;
-      insert_newline_test "insert new line into buffer"
-        [ "ab"; "c"; "" ] fb;
-      insert_test "insert second character into buffer" 'd'
-        [ "ab"; "c"; "d" ] fb;
-      insert_test "insert second character into buffer" 'e'
+      insert_test "insert into newline" 'c' [ "ab"; "c" ] fb;
+      insert_newline_test "insert another new line" [ "ab"; "c"; "" ] fb;
+      insert_test "insert into another new line" 'd' [ "ab"; "c"; "d" ]
+        fb;
+      insert_test "insert second character into new line" 'e'
         [ "ab"; "c"; "de" ] fb;
-      mv_up_test "insert second character into buffer" 'f' 1
-        [ "ab"; "cf"; "de" ] fb;
-      mv_down_test "insert second character into buffer" 'g' 1
-        [ "ab"; "cf"; "deg" ] fb;
-      mv_down_test "insert second character into buffer" 'h' 100
-        [ "ab"; "cf"; "degh" ] fb;
-      mv_up_test "insert second character into buffer" 'i' 100
-        [ "abi"; "cf"; "degh" ] fb;
-      insert_newline_test "insert new line into buffer"
+      mv_test "move up 1" `Up 'f' 1 [ "ab"; "cf"; "de" ] fb;
+      mv_test "move down 1" `Down 'g' 1 [ "ab"; "cf"; "deg" ] fb;
+      mv_test "move down 100" `Down 'h' 100 [ "ab"; "cf"; "degh" ] fb;
+      mv_test "move up 100" `Up 'i' 100 [ "abi"; "cf"; "degh" ] fb;
+      insert_newline_test "insert new line after move up"
         [ "abi"; ""; "cf"; "degh" ]
         fb;
-      mv_down_test "insert second character into buffer" 'j' 1
+      mv_test "move down respects position cache 1" `Down 'j' 1
         [ "abi"; ""; "jcf"; "degh" ]
         fb;
-      mv_down_test "insert second character into buffer" 'k' 1
+      mv_test "move down respects position cache 2" `Down 'k' 1
         [ "abi"; ""; "jcf"; "dkegh" ]
         fb;
-      mv_up_test "insert second character into buffer" 'l' 3
+      mv_test "move up respects position cache" `Up 'l' 3
         [ "abli"; ""; "jcf"; "dkegh" ]
         fb;
-      mv_down_test "insert second character into buffer" 'm' 3
+      mv_test "move down respects position cache 3" `Down 'm' 3
         [ "abli"; ""; "jcf"; "dkemgh" ]
+        fb;
+      mv_test "mv left" `Left 'n' 1 [ "abli"; ""; "jcf"; "dkenmgh" ] fb;
+      mv_test "mv left 100" `Left 'o' 100
+        [ "abli"; ""; "jcf"; "odkenmgh" ]
+        fb;
+      mv_test "mv right" `Right 'p' 1
+        [ "abli"; ""; "jcf"; "odpkenmgh" ]
+        fb;
+      mv_test "mv right 100" `Right 'q' 100
+        [ "abli"; ""; "jcf"; "odpkenmghq" ]
         fb;
     ]
 end

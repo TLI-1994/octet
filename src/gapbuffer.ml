@@ -112,3 +112,5 @@ let move_to gb pos =
     if pos < gb.gap_left then max 0 pos else min gb.num_of_char pos
   in
   mv_gap gb pos
+
+let content_size gb = gb.num_of_char

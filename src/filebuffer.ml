@@ -12,6 +12,8 @@ module type MUT_FILEBUFFER = sig
   val insert_newline : t -> t
   val mv_up : t -> t
   val mv_down : t -> t
+  val mv_left : t -> t
+  val mv_right : t -> t
 end
 
 module Make (LineBuffer : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER = struct
@@ -78,6 +80,26 @@ module Make (LineBuffer : Obuffer.MUT_BUFFER) : MUT_FILEBUFFER = struct
         LineBuffer.move_to h1 fb.cursor_pos_cache;
         fb.front <- h1 :: fb.front;
         fb.back <- h2 :: t;
+        fb
+
+  let mv_left fb =
+    match fb.front with
+    | [] -> failwith "no front buffer?"
+    | h :: _ ->
+        let pos = max 0 (fb.cursor_pos - 1) in
+        LineBuffer.move_to h pos;
+        fb.cursor_pos <- pos;
+        fb.cursor_pos_cache <- pos;
+        fb
+
+  let mv_right fb =
+    match fb.front with
+    | [] -> failwith "no front buffer?"
+    | h :: _ ->
+        let pos = min (LineBuffer.content_size h) (fb.cursor_pos + 1) in
+        LineBuffer.move_to h pos;
+        fb.cursor_pos <- pos;
+        fb.cursor_pos_cache <- pos;
         fb
 
   let contents fb =
