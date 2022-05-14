@@ -238,30 +238,40 @@ module FilebufferTests : Tests = struct
   let contents_test name expected fb =
     name >:: fun _ ->
     assert_equal expected
-      (Filebuffer.contents fb)
+      (Filebuffer.buffer_contents fb)
       ~printer:(Util.string_of_list String.escaped)
 
   let insert_test name c expected fb =
     name >:: fun _ ->
     assert_equal expected
-      (Filebuffer.insert_char fb c |> ignore;
-       Filebuffer.contents fb)
+      (Filebuffer.update_on_key fb (`ASCII c, []) |> ignore;
+       (* Filebuffer.insert_char fb c |> ignore; *)
+       Filebuffer.buffer_contents fb)
       ~printer:(Util.string_of_list String.escaped)
 
   let insert_newline_test name expected fb =
     name >:: fun _ ->
     assert_equal expected
-      (Filebuffer.insert_newline fb |> ignore;
-       Filebuffer.contents fb)
+      (Filebuffer.update_on_key fb (`Enter, []) |> ignore;
+       (* Filebuffer.insert_newline fb |> ignore; *)
+       Filebuffer.buffer_contents fb)
       ~printer:(Util.string_of_list String.escaped)
 
   let mv_test name direxn c n expected fb =
     let mv_fun =
       match direxn with
-      | `Up -> Filebuffer.mv_up
-      | `Down -> Filebuffer.mv_down
-      | `Left -> Filebuffer.mv_left
-      | `Right -> Filebuffer.mv_right
+      | `Up ->
+          fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
+          (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
+      | `Down ->
+          fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
+          (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
+      | `Left ->
+          fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
+          (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
+      | `Right ->
+          fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
+      (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
     in
     let rec mv_n fb = function
       | 0 -> ()
@@ -270,8 +280,9 @@ module FilebufferTests : Tests = struct
     name >:: fun _ ->
     assert_equal expected
       (mv_n fb n;
-       Filebuffer.insert_char fb c |> ignore;
-       Filebuffer.contents fb)
+       Filebuffer.update_on_key fb (`ASCII c, []) |> ignore;
+       (* Filebuffer.insert_char fb c |> ignore; *)
+       Filebuffer.buffer_contents fb)
       ~printer:(Util.string_of_list String.escaped)
 
   let fb = Filebuffer.empty ()
