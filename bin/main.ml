@@ -3,7 +3,7 @@ open Octet
 open Buffermanager
 
 let init_l = Obuffer.from_file "data/input.txt" |> init |> toggle_focus
-let init_r = Obuffer.empty |> init
+let init_r = Obuffer.empty () |> init
 let init_bm = init_l <|> init_r <-> empty_minibuffer
 
 let main =

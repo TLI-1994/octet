@@ -63,3 +63,6 @@ let to_string (buf : t) : string =
   ^ Bytes.to_string
       (Bytes.sub buf.contents_R buf.r_pos
          (Bytes.length buf.contents_R - buf.r_pos))
+
+let move_to _ _ = failwith "unimplemented"
+let content_size _ = failwith "unimplemented"

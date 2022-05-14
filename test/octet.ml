@@ -233,11 +233,125 @@ module UtilTests : Tests = struct
     ]
 end
 
+module FilebufferTests : Tests = struct
+  module Filebuffer = Filebuffer.Make (Gapbuffer)
+
+  let contents_test name expected fb =
+    name >:: fun _ ->
+    assert_equal expected
+      (Filebuffer.buffer_contents fb)
+      ~printer:(Util.string_of_list String.escaped)
+
+  let insert_test name c expected fb =
+    name >:: fun _ ->
+    assert_equal expected
+      (Filebuffer.update_on_key fb (`ASCII c, []) |> ignore;
+       (* Filebuffer.insert_char fb c |> ignore; *)
+       Filebuffer.buffer_contents fb)
+      ~printer:(Util.string_of_list String.escaped)
+
+  let insert_newline_test name expected fb =
+    name >:: fun _ ->
+    assert_equal expected
+      (Filebuffer.update_on_key fb (`Enter, []) |> ignore;
+       (* Filebuffer.insert_newline fb |> ignore; *)
+       Filebuffer.buffer_contents fb)
+      ~printer:(Util.string_of_list String.escaped)
+
+  let mv_test name direxn c n expected fb =
+    let mv_fun =
+      match direxn with
+      | `Up ->
+          fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
+          (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
+      | `Down ->
+          fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
+          (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
+      | `Left ->
+          fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
+          (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
+      | `Right ->
+          fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
+      (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
+    in
+    let rec mv_n fb = function
+      | 0 -> ()
+      | n -> mv_n (mv_fun fb) (n - 1)
+    in
+    name >:: fun _ ->
+    assert_equal expected
+      (mv_n fb n;
+       Filebuffer.update_on_key fb (`ASCII c, []) |> ignore;
+       (* Filebuffer.insert_char fb c |> ignore; *)
+       Filebuffer.buffer_contents fb)
+      ~printer:(Util.string_of_list String.escaped)
+
+  let fb = Filebuffer.empty ()
+
+  let tests =
+    [
+      contents_test "empty buffer has no contents" [ "" ] fb;
+      insert_test "insert first character into buffer" 'a' [ "a" ] fb;
+      insert_test "insert second character into buffer" 'b' [ "ab" ] fb;
+      insert_newline_test "insert new line into buffer" [ "ab"; "" ] fb;
+      insert_test "insert into newline" 'c' [ "ab"; "c" ] fb;
+      insert_newline_test "insert another new line" [ "ab"; "c"; "" ] fb;
+      insert_test "insert into another new line" 'd' [ "ab"; "c"; "d" ]
+        fb;
+      insert_test "insert second character into new line" 'e'
+        [ "ab"; "c"; "de" ] fb;
+      mv_test "move up 1" `Up 'f' 1 [ "ab"; "cf"; "de" ] fb;
+      mv_test "move down 1" `Down 'g' 1 [ "ab"; "cf"; "deg" ] fb;
+      mv_test "move down 100" `Down 'h' 100 [ "ab"; "cf"; "degh" ] fb;
+      mv_test "move up 100" `Up 'i' 100 [ "abi"; "cf"; "degh" ] fb;
+      insert_newline_test "insert new line after move up"
+        [ "abi"; ""; "cf"; "degh" ]
+        fb;
+      mv_test "move down respects position cache 1" `Down 'j' 1
+        [ "abi"; ""; "jcf"; "degh" ]
+        fb;
+      mv_test "move down respects position cache 2" `Down 'k' 1
+        [ "abi"; ""; "jcf"; "dkegh" ]
+        fb;
+      mv_test "move up respects position cache" `Up 'l' 3
+        [ "abli"; ""; "jcf"; "dkegh" ]
+        fb;
+      mv_test "move down respects position cache 3" `Down 'm' 3
+        [ "abli"; ""; "jcf"; "dkemgh" ]
+        fb;
+      mv_test "mv left" `Left 'n' 1 [ "abli"; ""; "jcf"; "dkenmgh" ] fb;
+      mv_test "mv left 100" `Left 'o' 100
+        [ "abli"; ""; "jcf"; "odkenmgh" ]
+        fb;
+      mv_test "mv right" `Right 'p' 1
+        [ "abli"; ""; "jcf"; "odpkenmgh" ]
+        fb;
+      mv_test "mv right 100" `Right 'q' 100
+        [ "abli"; ""; "jcf"; "odpkenmghq" ]
+        fb;
+      mv_test "mv left 5" `Left 'r' 5
+        [ "abli"; ""; "jcf"; "odpkernmghq" ]
+        fb;
+      insert_newline_test "insert newline in the middle of a line"
+        [ "abli"; ""; "jcf"; "odpker"; "nmghq" ]
+        fb;
+      insert_test "insert works well after inserting newline" 's'
+        [ "abli"; ""; "jcf"; "odpker"; "snmghq" ]
+        fb;
+      mv_test "mv up works well after inserting newline" `Up 't' 1
+        [ "abli"; ""; "jcf"; "otdpker"; "snmghq" ]
+        fb;
+    ]
+end
+
 let tests =
   "test suite for project"
   >::: List.flatten
          [
-           BytebufferTests.tests; GapbufferTests.tests; UtilTests.tests;
+           BytebufferTests.tests;
+           GapbufferTests.tests;
+           UtilTests.tests;
+           FilebufferTests.tests;
          ]
 
 let _ = run_test_tt_main tests

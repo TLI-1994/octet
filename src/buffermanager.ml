@@ -22,7 +22,7 @@ let rec write_all = function
 
 (** todo: rethink when the minibuffer gets added *)
 let empty_minibuffer =
-  Minibuffer { buffer = Obuffer.empty; active = false }
+  Minibuffer { buffer = Obuffer.empty (); active = false }
 
 let init (b : Obuffer.t) = Leaf { buffer = b; active = false }
 

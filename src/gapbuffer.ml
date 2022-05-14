@@ -5,10 +5,12 @@ type t = {
   mutable gap_right : int;
   mutable num_of_char : int;
 }
+(** RI: gap_left <= gap_right + 1. When the equality holds, the size of
+    the gap is 0. *)
 
 let make str len =
   let num_of_char = String.length str in
-  let len = max (num_of_char + 1) len in
+  let len = max len (num_of_char + 1) in
   let main_array =
     Array.init len (fun i ->
         if i < num_of_char then String.get str i else '_')
@@ -44,20 +46,26 @@ let grow gb pos =
   gb.gap_right <- gb.gap_right + gb.gap_len;
   gb.gap_len <- 2 * gb.gap_len
 
+let mv_left1 gb =
+  gb.gap_left <- gb.gap_left - 1;
+  gb.gap_right <- gb.gap_right - 1;
+  gb.main_array.(gb.gap_right + 1) <- gb.main_array.(gb.gap_left);
+  gb.main_array.(gb.gap_left) <- '_'
+
 let mv_left gb pos =
   while gb.gap_left <> pos do
-    gb.gap_left <- gb.gap_left - 1;
-    gb.gap_right <- gb.gap_right - 1;
-    gb.main_array.(gb.gap_right + 1) <- gb.main_array.(gb.gap_left);
-    gb.main_array.(gb.gap_left) <- '_'
+    mv_left1 gb
   done
+
+let mv_right1 gb =
+  gb.gap_left <- gb.gap_left + 1;
+  gb.gap_right <- gb.gap_right + 1;
+  gb.main_array.(gb.gap_left - 1) <- gb.main_array.(gb.gap_right);
+  gb.main_array.(gb.gap_right) <- '_'
 
 let mv_right gb pos =
   while gb.gap_left <> pos do
-    gb.gap_left <- gb.gap_left + 1;
-    gb.gap_right <- gb.gap_right + 1;
-    gb.main_array.(gb.gap_left - 1) <- gb.main_array.(gb.gap_right);
-    gb.main_array.(gb.gap_right) <- '_'
+    mv_right1 gb
   done
 
 let mv_gap gb pos =
@@ -72,12 +80,8 @@ let resize gb =
   gb.main_array <- new_main_array
 
 let insert_string gb instring pos =
-  if
-    String.length instring + gb.num_of_char >= gb.gap_len
-    && Array.length gb.main_array < 2 * gb.gap_len
-    (* Array.length gb.main_array < gb.num_of_char + gb.gap_len +
-       String.length instring *)
-  then resize gb
+  if String.length instring + gb.num_of_char >= gb.gap_len then
+    resize gb
   else ();
   if gb.gap_left <> pos then mv_gap gb pos else ();
   for i = 0 to String.length instring - 1 do
@@ -93,14 +97,20 @@ let delete_at_pos gb pos =
   gb.main_array.(gb.gap_right) <- '_';
   gb.num_of_char <- gb.num_of_char - 1
 
-let left gb =
-  if gb.gap_left <> 0 then mv_left gb (gb.gap_left - 1) else ()
+let left gb = if gb.gap_left <> 0 then mv_left1 gb else ()
 
 let right gb =
-  if gb.gap_left <> gb.num_of_char then mv_right gb (gb.gap_left + 1)
-  else ()
+  if gb.gap_left <> gb.num_of_char then mv_right1 gb else ()
 
 let insert gb c = insert_string gb (Char.escaped c) gb.gap_left
 
 let delete gb =
   if gb.gap_left <> 0 then delete_at_pos gb (gb.gap_left - 1) else ()
+
+let move_to gb pos =
+  let pos =
+    if pos < gb.gap_left then max 0 pos else min gb.num_of_char pos
+  in
+  mv_gap gb pos
+
+let content_size gb = gb.num_of_char
