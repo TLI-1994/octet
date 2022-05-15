@@ -1,4 +1,5 @@
 open OUnit2
+open Octet
 open Util
 
 let string_of_string_list (input : string list) : string =

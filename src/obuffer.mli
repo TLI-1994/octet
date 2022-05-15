@@ -1,23 +1,25 @@
 module type MUT_BUFFER = sig
   type t
-  (** gap buffer made of byte sequences *)
+  (** [t] is the type of a mutable buffer with a resizable backing
+      array. *)
 
   val make : string -> int -> t
-  (** [make str len] creates a gap buffer that can support strings of
-      size up to [len] before any resizing is needed, and is initialized
-      to contain [str] with the cursor directly after the string *)
+  (** [make str len] creates a buffer that can support strings of size
+      up to [len] before any resizing is needed, and is initialized to
+      contain [str] with the cursor directly after the string. *)
 
   val insert : t -> char -> unit
-  (** inserts a character at the location of the cursor *)
+  (** [insert buf c] inserts [c] at the location of the cursor and
+      shifts the cursor to be after [c]. *)
 
   val delete : t -> unit
-  (** deletes the character at the location of the cursor *)
+  (** [delete buf] deletes the character at the location of the cursor. *)
 
   val to_string : t -> string
-  (** convert the contents of the buffer to a string *)
+  (** [to_string buf] is a string with the contents of [buf]. *)
 
   val left : t -> unit
-  (** move the cursor left *)
+  (** [left buf] moves the cursor left one character. *)
 
   val right : t -> unit
   (** move the cursor right *)
@@ -57,7 +59,8 @@ val from_file : string -> t
 (** [from_file s] is a buffer containing the contents of the path [s]. *)
 
 val write_to_file : t -> unit
-(** write the contents of the buffer to the file in its name *)
+(** [write_to_file buffer] writes the contents of the buffer to the file
+    in its name. *)
 
 val update_on_key : t -> Notty.Unescape.key -> t
 (** [handle_keystroke buffer key] is [buffer] updated according to the
@@ -72,8 +75,8 @@ val to_image : t -> int -> int * int -> bool -> Notty.I.t
 
 val buffer_contents : t -> string list
 (** [buffer_contents buffer] is the contents of [buffer]. *)
-(*TODO: remove this function when the implementation of to_image is
-  complete.*)
+(* TODO: remove this function when the implementation of to_image is
+   complete.*)
 
 val ocaml_format : t -> t
 (** [ocaml_format buffer] is the buffer with the ocaml format applied. *)

@@ -1,6 +1,6 @@
 (lang dune 2.9)
 
-(name octet)
+(name Octet)
 
 (generate_opam_files true)
 
@@ -16,7 +16,7 @@
 (documentation https://url/to/documentation)
 
 (package
- (name octet)
+ (name Octet)
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends ocaml dune)
