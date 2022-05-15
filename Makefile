@@ -25,7 +25,7 @@ cloc:
 	cloc --by-file --include-lang=OCaml .
 
 bisect test: bisect-clean
-	-dune exec --instrument-with bisect_ppx --force test/octet.exe -- -runner sequential
+	-dune exec --instrument-with bisect_ppx --force test/main.exe -- -runner sequential
 	bisect-ppx-report html
 	echo Coverage report saved to: $(PWD)/_coverage/index.html
 

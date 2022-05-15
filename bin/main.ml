@@ -1,8 +1,8 @@
 open Notty_unix
 open Octet
-module FileBuffer = Filebuffer.Make (Gapbuffer)
-
+module FileBuffer = Filebuffer.Make (Bytebuffer)
 (* module FileBuffer = Obuffer *)
+
 open Buffermanager.Make (FileBuffer)
 
 let init_l =

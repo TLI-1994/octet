@@ -37,7 +37,7 @@ let insert (buf : t) (c : char) : unit =
   Bytes.set buf.contents_L buf.l_pos c;
   buf.l_pos <- buf.l_pos + 1
 
-let delete (buf : t) : unit = buf.l_pos <- buf.l_pos - 1
+let delete (buf : t) : unit = buf.l_pos <- max 0 (buf.l_pos - 1)
 
 let left (buf : t) : unit =
   if buf.l_pos > 0 then begin
@@ -64,5 +64,15 @@ let to_string (buf : t) : string =
       (Bytes.sub buf.contents_R buf.r_pos
          (Bytes.length buf.contents_R - buf.r_pos))
 
-let move_to _ _ = failwith "unimplemented"
-let content_size _ = failwith "unimplemented"
+let content_size buf =
+  buf.l_pos + (Bytes.length buf.contents_R - buf.r_pos)
+
+let move_to buf l =
+  let l = max 0 l in
+  let l = min l (content_size buf) in
+  while buf.l_pos > l do
+    left buf
+  done;
+  while buf.l_pos < l do
+    right buf
+  done
