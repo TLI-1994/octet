@@ -3,24 +3,12 @@ open Notty.Infix
 
 module type MUT_BUFFER = sig
   type t
-  (** gap buffer made of byte sequences *)
 
   val make : string -> int -> t
-  (** [make str len] creates a gap buffer that can support strings of
-      size up to [len] before any resizing is needed, and is initialized
-      to contain [str] with the cursor directly after the string *)
-
   val insert : t -> char -> unit
-  (** inserts a character at the location of the cursor *)
-
   val delete : t -> unit
-  (** deletes the character at the location of the cursor *)
-
   val to_string : t -> string
-  (** convert the contents of the buffer to a string *)
-
   val left : t -> unit
-  (** move the cursor left *)
 
   val right : t -> unit
   (** move the cursor right *)
@@ -39,12 +27,10 @@ module type MUT_FILEBUFFER = sig
   val from_file : string -> t
   val write_to_file : t -> unit
   val to_image : t -> int -> int * int -> bool -> Notty.I.t
-  val to_string : t -> string
+
+  (* val to_string : t -> string *)
   val buffer_contents : t -> string list
   val ocaml_format : t -> t
-  (* val insert_char : t -> char -> t val insert_newline : t -> t val
-     mv_up : t -> t val mv_down : t -> t val mv_left : t -> t val
-     mv_right : t -> t *)
 
   val update_on_key : t -> Notty.Unescape.key -> t
   (** [handle_keystroke buffer key] is [buffer] updated according to the

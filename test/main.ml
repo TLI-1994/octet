@@ -1,4 +1,5 @@
 open OUnit2
+open Octet
 open Util
 
 let string_of_string_list (input : string list) : string =
@@ -9,7 +10,7 @@ module type Tests = sig
 end
 
 module type String = sig
-  val x : int
+  val x : string
 end
 
 module type MUT_BUFFER_TEST_ENV = sig
@@ -45,6 +46,7 @@ module type MUT_BUFFER_TEST_ENV = sig
     | Left
     | Right
     | Insert of char
+    | Moveto of int
     | Delete
 
   val make_sequence_test :
@@ -58,6 +60,15 @@ end
 module TestEnv_of_Buffer (Buffer : Obuffer.MUT_BUFFER) :
   MUT_BUFFER_TEST_ENV = struct
   include Buffer
+
+  let contents_size_test
+      (name : string)
+      (expected : int)
+      (buf : Buffer.t) =
+    name ^ " (contents size test)" >:: fun _ ->
+    assert_equal expected
+      (Buffer.content_size buf)
+      ~printer:string_of_int
 
   let buffer_string_test
       (name : string)
@@ -107,11 +118,23 @@ module TestEnv_of_Buffer (Buffer : Obuffer.MUT_BUFFER) :
        Buffer.to_string buf)
       ~printer:(fun x -> x)
 
+  let moveto_buffer_test
+      (name : string)
+      (index : int)
+      (expected : string)
+      (buf : Buffer.t) =
+    name >:: fun _ ->
+    assert_equal expected
+      (Buffer.move_to buf index;
+       Buffer.to_string buf)
+      ~printer:(fun x -> x)
+
   type buffer_op =
     | Read
     | Left
     | Right
     | Insert of char
+    | Moveto of int
     | Delete
 
   let make_sequence_test buf steps =
@@ -119,13 +142,16 @@ module TestEnv_of_Buffer (Buffer : Obuffer.MUT_BUFFER) :
       (fun i (op, e1, e2) ->
         let expected = e1 ^ e2 in
         let name = Printf.sprintf "sequence test: step %i" i in
-        match op with
+        (match op with
         | Read -> buffer_string_test name expected buf
         | Left -> left_buffer_test name expected buf
         | Right -> right_buffer_test name expected buf
         | Insert i -> insert_buffer_test name i expected buf
-        | Delete -> delete_buffer_test name expected buf)
+        | Delete -> delete_buffer_test name expected buf
+        | Moveto i -> moveto_buffer_test name i expected buf)
+        :: [ contents_size_test name (String.length expected) buf ])
       steps
+    |> List.flatten
 end
 
 module Buffer_Tests (Buffer : Obuffer.MUT_BUFFER) : Tests = struct
@@ -170,6 +196,12 @@ module Buffer_Tests (Buffer : Obuffer.MUT_BUFFER) : Tests = struct
         (Right, "abcdkl", "ij");
         (Right, "abcdkli", "j");
         (Right, "abcdklij", "");
+        (Moveto 3, "abc", "dklij");
+        (Insert 'x', "abcx", "dklij");
+        (Moveto 7, "abcxdkl", "ij");
+        (Delete, "abcxdk", "ij");
+        (Moveto 0, "", "abcxdkij");
+        (Delete, "", "abcxdkij");
       ]
 
   let tests = List.flatten [ basic_tests; sequence_test ]
@@ -245,7 +277,6 @@ module FilebufferTests : Tests = struct
     name >:: fun _ ->
     assert_equal expected
       (Filebuffer.update_on_key fb (`ASCII c, []) |> ignore;
-       (* Filebuffer.insert_char fb c |> ignore; *)
        Filebuffer.buffer_contents fb)
       ~printer:(Util.string_of_list String.escaped)
 
@@ -253,7 +284,6 @@ module FilebufferTests : Tests = struct
     name >:: fun _ ->
     assert_equal expected
       (Filebuffer.update_on_key fb (`Enter, []) |> ignore;
-       (* Filebuffer.insert_newline fb |> ignore; *)
        Filebuffer.buffer_contents fb)
       ~printer:(Util.string_of_list String.escaped)
 
@@ -267,7 +297,6 @@ module FilebufferTests : Tests = struct
     assert_equal expected
       (mv_n fb n;
        Filebuffer.update_on_key fb (`ASCII c, []) |> ignore;
-       (* Filebuffer.insert_char fb c |> ignore; *)
        Filebuffer.buffer_contents fb)
       ~printer:(Util.string_of_list String.escaped)
 

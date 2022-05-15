@@ -1,23 +1,25 @@
 module type MUT_BUFFER = sig
   type t
-  (** gap buffer made of byte sequences *)
+  (** [t] is the type of a mutable buffer for the contents of a line,
+      with a resizable backing array. *)
 
   val make : string -> int -> t
-  (** [make str len] creates a gap buffer that can support strings of
-      size up to [len] before any resizing is needed, and is initialized
-      to contain [str] with the cursor directly after the string *)
+  (** [make str len] creates a buffer that can support strings of size
+      up to [len] before any resizing is needed, and is initialized to
+      contain [str] with the cursor directly after the string. *)
 
   val insert : t -> char -> unit
-  (** inserts a character at the location of the cursor *)
+  (** [insert buf c] inserts [c] at the location of the cursor and
+      shifts the cursor to be after [c]. *)
 
   val delete : t -> unit
-  (** deletes the character at the location of the cursor *)
+  (** [delete buf] deletes the character at the location of the cursor. *)
 
   val to_string : t -> string
-  (** convert the contents of the buffer to a string *)
+  (** [to_string buf] is a string with the contents of [buf]. *)
 
   val left : t -> unit
-  (** move the cursor left *)
+  (** [left buf] moves the cursor left one character. *)
 
   val right : t -> unit
   (** move the cursor right *)
@@ -31,49 +33,38 @@ end
 
 module type MUT_FILEBUFFER = sig
   type t
+  (** [t] is the type of a buffer representing the contents of a file. *)
 
   val empty : unit -> t
+  (** [empty ()] is an empty buffer. *)
+
   val from_file : string -> t
+  (** [from_file s] is a buffer containing the contents of the path [s]. *)
+
   val write_to_file : t -> unit
+  (** [write_to_file buffer] writes the contents of the buffer to the
+      file in its name. *)
+
   val to_image : t -> int -> int * int -> bool -> Notty.I.t
-  val to_string : t -> string
+  (** [to_image buffer top_line (h, w) show_cursor] is the image of
+      [buffer] starting from [top_line], wrapped by width [w], cropped
+      to height of [h] with cursor if [show_cursor] and without cursor
+      if not [show_cursor]. *)
+
+  (* TODO: simplify this function (?). *)
+
+  (* val to_string : t -> string *)
   val buffer_contents : t -> string list
+  (** [buffer_contents buffer] is the contents of [buffer]. *)
+  (* TODO: remove this function when the implementation of to_image is
+     complete.*)
+
   val ocaml_format : t -> t
-  (* val insert_char : t -> char -> t val insert_newline : t -> t val
-     mv_up : t -> t val mv_down : t -> t val mv_left : t -> t val
-     mv_right : t -> t *)
+  (** [ocaml_format buffer] is the buffer with the ocaml format applied. *)
 
   val update_on_key : t -> Notty.Unescape.key -> t
-  (** [handle_keystroke buffer key] is [buffer] updated according to the
+  (** [update_on_key buffer key] is [buffer] updated according to the
       signal sent by [key]. *)
 end
 
-type t
-
-val empty : unit -> t
-(** The empty buffer. *)
-
-val from_file : string -> t
-(** [from_file s] is a buffer containing the contents of the path [s]. *)
-
-val write_to_file : t -> unit
-(** write the contents of the buffer to the file in its name *)
-
-val update_on_key : t -> Notty.Unescape.key -> t
-(** [handle_keystroke buffer key] is [buffer] updated according to the
-    signal sent by [key]. *)
-
-val to_image : t -> int -> int * int -> bool -> Notty.I.t
-(** [to_image buffer top_line (h, w) show_cursor] is the image of
-    [buffer] starting from [top_line], wrapped by width [w], cropped to
-    height of [h] with cursor if [show_cursor] and without cursor if not
-    [show_cursor]. *)
-(* TODO: simplify this function. *)
-
-val buffer_contents : t -> string list
-(** [buffer_contents buffer] is the contents of [buffer]. *)
-(*TODO: remove this function when the implementation of to_image is
-  complete.*)
-
-val ocaml_format : t -> t
-(** [ocaml_format buffer] is the buffer with the ocaml format applied. *)
+include MUT_FILEBUFFER

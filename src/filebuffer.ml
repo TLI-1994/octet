@@ -28,8 +28,8 @@ struct
       along the current and past lines. [desc] is the path to which file
       buffer_contents will be written.
 
-      RI: [cursor_pos_cache >= cursor_pos], no line buffers contain the
-      character ['\n']. *)
+      RI: [cursor_pos_cache >= cursor_pos]. [h <> \[\]]. no line buffers
+      contain the character ['\n']. *)
 
   let empty () =
     {
@@ -112,6 +112,28 @@ struct
         fb.cursor_pos_cache <- pos;
         fb
 
+  let delete fb =
+    begin
+      match fb.front with
+      | [] -> failwith "no front buffer?"
+      | h1 :: h2 :: t when fb.cursor_pos = 0 ->
+          let prev_line = LineBuffer.to_string h2 in
+          let new_line = prev_line ^ LineBuffer.to_string h1 in
+          let new_buf =
+            LineBuffer.make new_line (2 * String.length new_line)
+          in
+          fb.front <- new_buf :: t;
+          LineBuffer.move_to new_buf (String.length prev_line);
+          fb.cursor_line <- fb.cursor_line - 1;
+          fb.cursor_pos <- String.length prev_line;
+          fb.cursor_pos_cache <- String.length prev_line
+      | h :: _ ->
+          LineBuffer.delete h;
+          fb.cursor_pos <- max 0 (fb.cursor_pos - 1);
+          fb.cursor_pos_cache <- max 0 (fb.cursor_pos_cache - 1)
+    end;
+    fb
+
   let buffer_contents fb =
     List.rev_append fb.back fb.front (* line buffers in reverse order *)
     |> List.rev_map LineBuffer.to_string
@@ -132,14 +154,15 @@ struct
 
   let from_file (file_name : string) =
     let ans = empty () in
-    {
-      ans with
-      back =
-        read_file file_name
-        |> String.split_on_char '\n'
-        |> List.map (fun s -> LineBuffer.make s 80);
-      desc = file_name;
-    }
+    let line_list =
+      read_file file_name
+      |> String.split_on_char '\n'
+      |> List.map (fun s -> LineBuffer.make s 80)
+    in
+    match line_list with
+    | [] -> ans
+    | [ _ ] -> { ans with front = line_list }
+    | h :: t -> { ans with front = [ h ]; back = t; desc = file_name }
 
   let write_to_file buffer =
     let out_channel = open_out buffer.desc in
@@ -171,7 +194,7 @@ struct
     (* | `ASCII 'F', [ `Ctrl ] -> forward_word buffer | `ASCII 'B', [
        `Ctrl ] -> backward_word buffer *)
     | `ASCII ch, _ -> insert_char buffer ch
-    (* | `Backspace, _ | `Delete, _ -> delete buffer *)
+    | `Backspace, _ | `Delete, _ -> delete buffer
     | `Arrow direxn, _ -> mv_cursor buffer direxn
     | _ -> buffer
 

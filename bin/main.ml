@@ -1,8 +1,14 @@
 open Notty_unix
-open Buffermanager
+open Octet
+module FileBuffer = Filebuffer.Make (Bytebuffer)
+(* module FileBuffer = Obuffer *)
 
-let init_l = Obuffer.from_file "data/input.txt" |> init |> toggle_focus
-let init_r = Obuffer.empty () |> init
+open Buffermanager.Make (FileBuffer)
+
+let init_l =
+  FileBuffer.from_file "data/input.txt" |> init |> toggle_focus
+
+let init_r = FileBuffer.empty () |> init
 let init_bm = init_l <|> init_r <-> empty_minibuffer
 
 let main =

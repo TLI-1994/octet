@@ -1,39 +1,6 @@
 (library
- (name util)
- (modules util))
-
-(library
- (name obuffer)
- (modules obuffer)
- (libraries notty notty.unix util))
-
-(library
- (name filebuffer)
- (modules filebuffer)
- (libraries util gapbuffer bytebuffer)
+ (name octet)
+ (public_name Octet)
+ (libraries notty notty.unix)
  (instrumentation
   (backend bisect_ppx)))
-
-(library
- (name gapbuffer)
- (modules gapbuffer)
- (libraries util obuffer)
- (instrumentation
-  (backend bisect_ppx)))
-
-(library
- (name bytebuffer)
- (modules bytebuffer)
- (libraries util obuffer)
- (instrumentation
-  (backend bisect_ppx)))
-
-(library
- (name orender)
- (modules orender)
- (libraries notty notty.unix obuffer))
-
-(library
- (name buffermanager)
- (modules buffermanager)
- (libraries notty notty.unix obuffer))
