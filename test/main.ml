@@ -1,9 +1,22 @@
 open OUnit2
 open Octet
 open Util
+(* Testing plan:
 
-let string_of_string_list (input : string list) : string =
-  input |> List.map (fun s -> s ^ ", ") |> List.fold_left ( ^ ) ""
+   We have tested our backend using OUnit test cases. We developed our
+   test cases using black box testing (paths through the spec) and then
+   added glass box test cases to increase coverage. Tests are
+   functorized, minimizing code duplication and testing multiple
+   implementations of the same interface, some of which provide
+   amortized or worst-case performance gains over earlier versions.
+   Although much of our functionality is implemented in helper functions
+   which are not exposed, we are able to test them anyway by creating
+   Notty keystrokes and passing them into [update_on_key].
+
+   We manually tested the rendering code (creating terminal images and
+   syntax highlighting) and the integration of the entire system, but
+   these test cases were key to ensuring the correctness and consistency
+   of our underlying data structures. *)
 
 module type Tests = sig
   val tests : test list
@@ -230,7 +243,7 @@ module UtilTests : Tests = struct
     name >:: fun _ ->
     assert_equal expected_output
       (split_at_n input_line i)
-      ~printer:string_of_string_list
+      ~printer:(Util.string_of_list String.escaped)
 
   let delete_test
       (name : string)
