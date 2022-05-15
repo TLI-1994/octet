@@ -10,7 +10,7 @@ module type Tests = sig
 end
 
 module type String = sig
-  val x : int
+  val x : string
 end
 
 module type MUT_BUFFER_TEST_ENV = sig
