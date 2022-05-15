@@ -28,8 +28,8 @@ struct
       along the current and past lines. [desc] is the path to which file
       buffer_contents will be written.
 
-      RI: [cursor_pos_cache >= cursor_pos], no line buffers contain the
-      character ['\n']. *)
+      RI: [cursor_pos_cache >= cursor_pos]. [h <> \[\]]. no line buffers
+      contain the character ['\n']. *)
 
   let empty () =
     {
@@ -112,6 +112,28 @@ struct
         fb.cursor_pos_cache <- pos;
         fb
 
+  let delete fb =
+    begin
+      match fb.front with
+      | [] -> failwith "no front buffer?"
+      | h1 :: h2 :: t when fb.cursor_pos = 0 ->
+          let prev_line = LineBuffer.to_string h2 in
+          let new_line = prev_line ^ LineBuffer.to_string h1 in
+          let new_buf =
+            LineBuffer.make new_line (2 * String.length new_line)
+          in
+          fb.front <- new_buf :: t;
+          LineBuffer.move_to new_buf (String.length prev_line);
+          fb.cursor_line <- fb.cursor_line - 1;
+          fb.cursor_pos <- String.length prev_line;
+          fb.cursor_pos_cache <- String.length prev_line
+      | h :: _ ->
+          LineBuffer.delete h;
+          fb.cursor_pos <- max 0 (fb.cursor_pos - 1);
+          fb.cursor_pos_cache <- max 0 (fb.cursor_pos_cache - 1)
+    end;
+    fb
+
   let buffer_contents fb =
     List.rev_append fb.back fb.front (* line buffers in reverse order *)
     |> List.rev_map LineBuffer.to_string
@@ -171,7 +193,7 @@ struct
     (* | `ASCII 'F', [ `Ctrl ] -> forward_word buffer | `ASCII 'B', [
        `Ctrl ] -> backward_word buffer *)
     | `ASCII ch, _ -> insert_char buffer ch
-    (* | `Backspace, _ | `Delete, _ -> delete buffer *)
+    | `Backspace, _ | `Delete, _ -> delete buffer
     | `Arrow direxn, _ -> mv_cursor buffer direxn
     | _ -> buffer
 

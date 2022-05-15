@@ -277,7 +277,6 @@ module FilebufferTests : Tests = struct
     name >:: fun _ ->
     assert_equal expected
       (Filebuffer.update_on_key fb (`ASCII c, []) |> ignore;
-       (* Filebuffer.insert_char fb c |> ignore; *)
        Filebuffer.buffer_contents fb)
       ~printer:(Util.string_of_list String.escaped)
 
@@ -285,25 +284,19 @@ module FilebufferTests : Tests = struct
     name >:: fun _ ->
     assert_equal expected
       (Filebuffer.update_on_key fb (`Enter, []) |> ignore;
-       (* Filebuffer.insert_newline fb |> ignore; *)
        Filebuffer.buffer_contents fb)
       ~printer:(Util.string_of_list String.escaped)
 
   let mv_test name direxn c n expected fb =
     let mv_fun =
       match direxn with
-      | `Up ->
-          fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
-          (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
+      | `Up -> fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
       | `Down ->
           fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
-          (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
       | `Left ->
           fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
-          (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
       | `Right ->
           fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
-      (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
     in
     let rec mv_n fb = function
       | 0 -> ()
@@ -313,7 +306,6 @@ module FilebufferTests : Tests = struct
     assert_equal expected
       (mv_n fb n;
        Filebuffer.update_on_key fb (`ASCII c, []) |> ignore;
-       (* Filebuffer.insert_char fb c |> ignore; *)
        Filebuffer.buffer_contents fb)
       ~printer:(Util.string_of_list String.escaped)
 
