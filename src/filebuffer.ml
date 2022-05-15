@@ -154,14 +154,15 @@ struct
 
   let from_file (file_name : string) =
     let ans = empty () in
-    {
-      ans with
-      back =
-        read_file file_name
-        |> String.split_on_char '\n'
-        |> List.map (fun s -> LineBuffer.make s 80);
-      desc = file_name;
-    }
+    let line_list =
+      read_file file_name
+      |> String.split_on_char '\n'
+      |> List.map (fun s -> LineBuffer.make s 80)
+    in
+    match line_list with
+    | [] -> ans
+    | [ _ ] -> { ans with front = line_list }
+    | h :: t -> { ans with front = [ h ]; back = t; desc = file_name }
 
   let write_to_file buffer =
     let out_channel = open_out buffer.desc in
