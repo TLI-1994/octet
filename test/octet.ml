@@ -258,21 +258,7 @@ module FilebufferTests : Tests = struct
       ~printer:(Util.string_of_list String.escaped)
 
   let mv_test name direxn c n expected fb =
-    let mv_fun =
-      match direxn with
-      | `Up ->
-          fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
-          (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
-      | `Down ->
-          fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
-          (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
-      | `Left ->
-          fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
-          (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
-      | `Right ->
-          fun fb -> Filebuffer.update_on_key fb (`Arrow direxn, [])
-      (* Filebuffer.update_on_key fb (`Arrow direxn, []) *)
-    in
+    let mv_fun fb = Filebuffer.update_on_key fb (`Arrow direxn, []) in
     let rec mv_n fb = function
       | 0 -> ()
       | n -> mv_n (mv_fun fb) (n - 1)
