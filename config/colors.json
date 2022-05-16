@@ -1,7 +1,7 @@
 {
   "cursor": {
-    "background": "black",
-    "keyword": "yellow",
+    "background": "yellow",
+    "keyword": "black",
     "symbol": "red",
     "number": "green",
     "other": "white"
