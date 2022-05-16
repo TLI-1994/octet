@@ -209,6 +209,7 @@ struct
     in
     go 0 |> I.vcat |> I.hsnap ~align:`Left width
 
+  let crop_to width img = I.hcrop 0 (I.width img - width) img
   let cursor_icon = "⚛"
 
   let cursor_image width =
@@ -318,6 +319,54 @@ struct
       render_line_without_cursor buffer absolute_location elt
         show_cursor
 
+  let _ = render_line
+  let _ = wrap_to
+  let _ = crop_to
+
+  let get_cursor_opt buffer show_cursor line_num =
+    if not show_cursor then None
+    else if buffer.cursor_line = line_num then Some buffer.cursor_pos
+    else None
+
+  let compute_hl_bounds buffer =
+    match
+      ( buffer.mark_line < buffer.cursor_line,
+        buffer.mark_line > buffer.cursor_line )
+    with
+    | false, true ->
+        ( buffer.cursor_line,
+          buffer.cursor_pos,
+          buffer.mark_line,
+          buffer.mark_pos )
+    | true, false ->
+        ( buffer.mark_line,
+          buffer.mark_pos,
+          buffer.cursor_line,
+          buffer.cursor_pos )
+    | false, false ->
+        ( buffer.mark_line,
+          min buffer.mark_pos buffer.cursor_pos,
+          buffer.mark_line,
+          max buffer.mark_pos buffer.cursor_pos )
+    | _ -> failwith "RI violated"
+
+  let get_hl_opt
+      buffer
+      width
+      (start_line, start_pos, end_line, end_pos)
+      line =
+    if not buffer.mark_active then None
+    else
+      let start_line, start_pos, end_line, end_pos =
+        (start_line, start_pos, end_line, end_pos)
+      in
+      if start_line = end_line && start_line = line then
+        Some (start_pos, end_pos)
+      else if start_line = line then Some (start_pos, width)
+      else if end_line = line then Some (0, end_pos)
+      else if start_line <= line && line <= end_line then Some (0, width)
+      else None
+
   let rec to_image
       (buffer : t)
       (top_line : int)
@@ -325,20 +374,29 @@ struct
       (show_cursor : bool) =
     let height = height - 1 in
     let width = width - 5 in
-    let padded_contents = pad_to (width, height) buffer in
+    let buffer_contents = pad_to (width, height) buffer in
     let line_nos = line_numbers height in
-    let remaining = Util.list_from_nth padded_contents top_line in
+    let remaining = Util.list_from_nth buffer_contents top_line in
+    let bounds = compute_hl_bounds buffer in
     let superimposed =
-      List.mapi (render_line buffer top_line show_cursor) remaining
+      List.mapi
+        (fun i ->
+          Orender.image_of_string
+            (get_hl_opt buffer width bounds i)
+            (get_cursor_opt buffer show_cursor i))
+        remaining
     in
-    let widthcropped = I.vcat (List.map (wrap_to width) superimposed) in
+    let widthcropped =
+      I.vcat (List.map (crop_to width) superimposed)
+      (* I.vcat superimposed *)
+    in
     let heightcropped =
       I.vcrop 0 (I.height widthcropped - height) widthcropped
     in
     line_nos <|> heightcropped <-> modeline_to_image buffer width
 
-  and line_numbers height =
-    Util.from 0 (height - 1)
+  and line_numbers h =
+    Util.from 0 (h - 1)
     |> List.map (fun d ->
            I.string A.(bg black ++ st italic) (Printf.sprintf "% 3d " d))
     |> I.vcat
