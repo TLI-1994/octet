@@ -29,3 +29,31 @@ let from i j =
     if i > j then l else from_aux i (j - 1) (j :: l)
   in
   from_aux i j []
+
+(** from A4 *)
+let string_of_list
+    ?(open_delim = "[")
+    ?(close_delim = "]")
+    ?(sep = "; ")
+    string_of_elt
+    lst =
+  let len = List.length lst in
+  let open Buffer in
+  (* As a rough lower bound assume that each element takes a minimum of
+     3 characters to represent including a separator, e.g., ["v, "]. The
+     buffer will grow as needed, so it's okay if that estimate is
+     low. *)
+  let buf = create (3 * len) in
+  add_string buf open_delim;
+  List.iteri
+    (fun i v ->
+      add_string buf (string_of_elt v);
+      if i < len - 1 then add_string buf sep)
+    lst;
+  add_string buf close_delim;
+  contents buf
+
+(** [list_from_nth lst n] is lst but without the first n elements. *)
+let rec list_from_nth lst = function
+  | 0 -> lst
+  | n -> list_from_nth (List.tl lst) @@ (n - 1)

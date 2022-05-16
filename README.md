@@ -1,4 +1,4 @@
-# OCTET (OCaml TExt ediTor)
+# ⚛️ OCTET (OCaml TExt ediTor)
 
 To install dependencies run
 

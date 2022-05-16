@@ -1,18 +1,6 @@
 (library
- (name util)
- (modules util))
-
-(library
- (name obuffer)
- (modules obuffer)
- (libraries notty notty.unix util orender))
-
-(library
- (name orender)
- (modules orender)
- (libraries notty notty.unix))
-
-(library
- (name buffermanager)
- (modules buffermanager)
- (libraries notty notty.unix obuffer))
+ (name octet)
+ (public_name Octet)
+ (libraries notty notty.unix)
+ (instrumentation
+  (backend bisect_ppx)))
