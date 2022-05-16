@@ -135,14 +135,12 @@ struct
 
   let from_file (file_name : string) =
     let ans = empty () in
-    let line_list =
-      Util.read_file file_name
-      |> String.split_on_char '\n'
-      |> List.map (fun s -> LineBuffer.make s 80)
-    in
-    match line_list with
+    Util.read_file file_name
+    |> String.split_on_char '\n'
+    |> List.map (fun s -> LineBuffer.make s 80)
+    |> function
     | [] -> ans
-    | [ _ ] -> { ans with front = line_list }
+    (* | [ h ] -> { ans with front = [ h ] } *)
     | h :: t -> { ans with front = [ h ]; back = t; desc = file_name }
 
   let write_to_file buffer =
@@ -189,6 +187,10 @@ struct
 
   open Notty
   open Notty.Infix
+
+  (* let wrap_to width img = let rec go off = I.hcrop off 0 img :: (if
+     I.width img - off > width then go (off + width) else []) in go 0 |>
+     I.vcat |> I.hsnap ~align:`Left width *)
 
   let cursor_icon = "⚛"
 

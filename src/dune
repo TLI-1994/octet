@@ -1,6 +1,6 @@
 (library
  (name octet)
  (public_name Octet)
- (libraries notty notty.unix)
+ (libraries notty notty.unix str yojson)
  (instrumentation
   (backend bisect_ppx)))
