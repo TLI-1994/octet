@@ -1,3 +1,5 @@
+(** Store multiple file buffers for rendering and editing operations. *)
+
 module type BUFFER_MANAGER = sig
   type t
   (** representation type of the buffer manager *)
