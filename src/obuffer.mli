@@ -66,5 +66,3 @@ module type MUT_FILEBUFFER = sig
   (** [update_on_key buffer key] is [buffer] updated according to the
       signal sent by [key]. *)
 end
-
-(* include MUT_FILEBUFFER *)

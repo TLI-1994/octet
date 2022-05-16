@@ -32,7 +32,7 @@ bisect test: bisect-clean
 bisect-clean:
 	rm -rf _coverage bisect*.coverage
 
-view-test:
+view-test view-bisect:
 	open -na "Brave Browser Beta" --args --incognito $(PWD)/_coverage/index.html
 
 zip:
