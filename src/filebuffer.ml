@@ -1,16 +1,3 @@
-(* module type MUT_FILEBUFFER = sig type t
-
-   val empty : unit -> t val from_file : string -> t val write_to_file :
-   t -> unit val to_image : t -> int -> int * int -> bool -> Notty.I.t
-   val to_string : t -> string val buffer_contents : t -> string list
-   val ocaml_format : t -> t val insert_char : t -> char -> t val
-   insert_newline : t -> t val mv_up : t -> t val mv_down : t -> t val
-   mv_left : t -> t val mv_right : t -> t
-
-   val update_on_key : t -> Notty.Unescape.key -> t (**
-   [handle_keystroke buffer key] is [buffer] updated according to the
-   signal sent by [key]. *) end *)
-
 module Make (LineBuffer : Obuffer.MUT_BUFFER) : Obuffer.MUT_FILEBUFFER =
 struct
   type t = {
@@ -20,6 +7,9 @@ struct
     mutable cursor_pos_cache : int;
     mutable desc : string;
     mutable cursor_line : int;
+    mark_line : int;
+    mark_pos : int;
+    mark_active : bool;
   }
   (** AF: buffers for the lines in the text file before and including
       the line with the cursor are in [front], in reverse order; buffers
@@ -39,6 +29,9 @@ struct
       cursor_pos_cache = 0;
       desc = "data/Empty Buffer";
       cursor_line = 0;
+      mark_line = 0;
+      mark_pos = 0;
+      mark_active = false;
     }
 
   let insert_char fb c =
@@ -187,21 +180,6 @@ struct
     | `Right -> mv_right buffer
 
   open Notty
-
-  let update_on_key (buffer : t) (key : Unescape.key) =
-    match key with
-    | `Enter, _ -> insert_newline buffer
-    (* | `ASCII 'F', [ `Ctrl ] -> forward_word buffer | `ASCII 'B', [
-       `Ctrl ] -> backward_word buffer *)
-    | `ASCII ch, _ -> insert_char buffer ch
-    | `Backspace, _ | `Delete, _ -> delete buffer
-    | `Arrow direxn, _ -> mv_cursor buffer direxn
-    | _ -> buffer
-
-  let rec list_from_nth lst = function
-    | 0 -> lst
-    | n -> list_from_nth (List.tl lst) @@ (n - 1)
-
   open Notty.Infix
 
   let wrap_to width img =
@@ -211,29 +189,160 @@ struct
     in
     go 0 |> I.vcat |> I.hsnap ~align:`Left width
 
-  let cursor_icon = " "
+  let cursor_icon = "⚛"
 
   let cursor_image width =
-    I.void width 1 <|> I.string A.(bg lightblack) cursor_icon
+    I.void width 1 <|> I.string A.(bg red ++ st blink) cursor_icon
 
-  let to_image
+  let toggle_mark (buffer : t) =
+    {
+      buffer with
+      mark_active = not buffer.mark_active;
+      mark_line = buffer.cursor_line;
+      mark_pos = buffer.cursor_pos;
+    }
+
+  let modeline_to_image (buffer : t) (width : int) =
+    I.string
+      A.(fg black ++ bg white)
+      (buffer.desc ^ "  Cursor Line: "
+      ^ string_of_int buffer.cursor_line
+      ^ "  Col: "
+      ^ string_of_int buffer.cursor_pos
+      ^ " Mark Line: "
+      ^ string_of_int buffer.mark_line
+      ^ "  Col: "
+      ^ string_of_int buffer.mark_pos)
+    </> I.char A.(fg black ++ bg white) ' ' width 1
+
+  let add_cursor (line : image) (cursor_pos : int) =
+    cursor_image cursor_pos </> line
+
+  let render_unselected (line : string) (active : bool) : image =
+    I.string
+      (if active then A.(fg lightwhite ++ bg lightblack) else A.empty)
+      line
+
+  let render_selected (line : string) : image =
+    I.string A.(bg lightblue) line
+
+  let render_beginning_selected
+      (line : string)
+      (pos : int)
+      (active : bool) : image =
+    let parts = Util.split_at_n line pos in
+    render_selected (List.nth parts 0)
+    <|> render_unselected (List.nth parts 1) active
+
+  let render_end_selected (line : string) (pos : int) (active : bool) :
+      image =
+    let parts = Util.split_at_n line pos in
+    render_unselected (List.nth parts 0) active
+    <|> render_selected (List.nth parts 1)
+
+  let render_selected_in_line
+      (line : string)
+      (s : int)
+      (e : int)
+      (active : bool) : image =
+    let parts = Util.split_at_n line e in
+    render_end_selected (List.nth parts 0) s active
+    <|> render_unselected (List.nth parts 1) active
+
+  let render_line_without_cursor
+      (buffer : t)
+      (absolute_line : int)
+      (line : string)
+      (active : bool) =
+    if buffer.mark_active then
+      let min_select = min buffer.cursor_line buffer.mark_line in
+      let max_select = max buffer.cursor_line buffer.mark_line in
+      let min_select_pos = min buffer.cursor_pos buffer.mark_pos in
+      let max_select_pos = max buffer.cursor_pos buffer.mark_pos in
+      let start_pos =
+        if buffer.cursor_line < buffer.mark_line then buffer.cursor_pos
+        else buffer.mark_pos
+      in
+      let end_pos =
+        if buffer.cursor_line > buffer.mark_line then buffer.cursor_pos
+        else buffer.mark_pos
+      in
+      if min_select = max_select && absolute_line = min_select then
+        (* one line *)
+        render_selected_in_line line min_select_pos max_select_pos
+          active
+      else if absolute_line < min_select then
+        render_unselected line active
+      else if absolute_line > max_select then
+        render_unselected line active
+      else if absolute_line = min_select then
+        render_end_selected line start_pos active
+      else if absolute_line = max_select then
+        render_beginning_selected line end_pos active
+      else render_selected line
+    else render_unselected line active
+
+  let render_line
+      (buffer : t)
+      (top_line : int)
+      (show_cursor : bool)
+      (i : int)
+      (elt : string) =
+    let absolute_location = i + top_line in
+    if absolute_location = buffer.cursor_line && show_cursor then
+      add_cursor
+        (render_line_without_cursor buffer absolute_location elt
+           show_cursor)
+        buffer.cursor_pos
+    else
+      render_line_without_cursor buffer absolute_location elt
+        show_cursor
+
+  let rec to_image
       (buffer : t)
       (top_line : int)
       ((width, height) : int * int)
       (show_cursor : bool) =
     let height = height - 1 in
-    let remaining = list_from_nth (buffer_contents buffer) top_line in
+    let width = width - 5 in
+    let padded_contents = pad_to (width, height) buffer in
+    let line_nos = line_numbers height in
+    let remaining = Util.list_from_nth padded_contents top_line in
     let superimposed =
-      List.mapi
-        (fun i elt ->
-          if i = buffer.cursor_line - top_line && show_cursor then
-            cursor_image buffer.cursor_pos </> I.string A.empty elt
-          else I.string A.empty elt)
-        remaining
+      List.mapi (render_line buffer top_line show_cursor) remaining
     in
     let widthcropped = I.vcat (List.map (wrap_to width) superimposed) in
     let heightcropped =
       I.vcrop 0 (I.height widthcropped - height) widthcropped
     in
-    heightcropped <-> I.string A.(fg red ++ bg white) buffer.desc
+    line_nos <|> heightcropped <-> modeline_to_image buffer width
+
+  and line_numbers height =
+    Util.from 0 (height - 1)
+    |> List.map (fun d ->
+           I.string A.(bg black ++ st italic) (Printf.sprintf "% 3d " d))
+    |> I.vcat
+
+  and pad_to ((width, height) : int * int) buffer =
+    let row_padded =
+      let contents = buffer_contents buffer in
+      let l = List.length contents in
+      if l >= height then contents
+      else contents @ List.map (fun _ -> "") (Util.from 0 (height - l))
+    in
+    List.map
+      (fun s ->
+        s ^ String.make (width - (String.length s mod width)) ' ')
+      row_padded
+
+  let update_on_key (buffer : t) (key : Unescape.key) =
+    match key with
+    | `Enter, _ -> insert_newline buffer
+    | `ASCII 'P', [ `Ctrl ] -> toggle_mark buffer
+    (* | `ASCII 'F', [ `Ctrl ] -> forward_word buffer | `ASCII 'B', [
+       `Ctrl ] -> backward_word buffer *)
+    | `ASCII ch, _ -> insert_char buffer ch
+    | `Backspace, _ | `Delete, _ -> delete buffer
+    | `Arrow direxn, _ -> mv_cursor buffer direxn
+    | _ -> buffer
 end

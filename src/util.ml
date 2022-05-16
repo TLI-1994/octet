@@ -52,3 +52,8 @@ let string_of_list
     lst;
   add_string buf close_delim;
   contents buf
+
+(** [list_from_nth lst n] is lst but without the first n elements. *)
+let rec list_from_nth lst = function
+  | 0 -> lst
+  | n -> list_from_nth (List.tl lst) @@ (n - 1)
