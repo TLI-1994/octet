@@ -6,112 +6,90 @@ type label =
   | Number of string
   | Other of string
 
-let keywords =
-  [
-    "and";
-    "as";
-    "assert";
-    "asr";
-    "begin";
-    "class";
-    "constraint";
-    "do";
-    "done";
-    "downto";
-    "else";
-    "end";
-    "exception";
-    "external";
-    "false";
-    "for";
-    "fun";
-    "function";
-    "functor";
-    "if";
-    "in";
-    "include";
-    "inherit";
-    "initializer";
-    "land";
-    "lazy";
-    "let";
-    "lor";
-    "lsl";
-    "lsr";
-    "lxor";
-    "match";
-    "method";
-    "mod";
-    "module";
-    "mutable";
-    "new";
-    "nonrec";
-    "object";
-    "of";
-    "open";
-    "or";
-    "private";
-    "rec";
-    "sig";
-    "struct";
-    "then";
-    "to";
-    "true";
-    "try";
-    "type";
-    "val";
-    "virtual";
-    "when";
-    "while";
-    "with";
-  ]
+let get_regex file field =
+  file
+  |> Yojson.Basic.Util.member field
+  |> Yojson.Basic.Util.to_string |> Str.regexp
 
-let symbols =
-  [
-    "!=";
-    "#";
-    "&";
-    "&&";
-    "'";
-    "(";
-    ")";
-    "*";
-    "+";
-    ",";
-    "-";
-    "-.";
-    "->";
-    ".";
-    "..";
-    ".~";
-    ":";
-    "::";
-    ":=";
-    ":>";
-    ";";
-    ";;";
-    "<";
-    "<-";
-    "=";
-    ">";
-    ">]";
-    ">}";
-    "?";
-    "[";
-    "[<";
-    "[>";
-    "[|";
-    "]";
-    "_";
-    "`";
-    "{";
-    "{<";
-    "|";
-    "|]";
-    "||";
-    "}";
-    "~";
-  ]
+let keyword_regex, symbol_regex =
+  try
+    let file = Yojson.Basic.from_file "config/syntax.json" in
+    (get_regex file "keywords", get_regex file "symbols")
+  with _ -> (Str.regexp "", Str.regexp "")
+
+let color_of_string =
+  let open Notty.A in
+  function
+  | "black" -> black
+  | "red" -> red
+  | "green" -> green
+  | "yellow" -> yellow
+  | "blue" -> blue
+  | "magenta" -> magenta
+  | "cyan" -> cyan
+  | "white" -> white
+  | "lightblack" -> lightblack
+  | "lightred" -> lightred
+  | "lightgreen" -> lightgreen
+  | "lightyellow" -> lightyellow
+  | "lightblue" -> lightblue
+  | "lightmagenta" -> lightmagenta
+  | "lightcyan" -> lightcyan
+  | "lightwhite" -> lightwhite
+  | _ -> blue
+
+type colormode = {
+  bg : A.color;
+  keyword : A.color;
+  symbol : A.color;
+  number : A.color;
+  other : A.color;
+}
+
+type colors = {
+  cursor : colormode;
+  hl : colormode;
+  default : colormode;
+}
+
+let colormode_of_json j =
+  let open Yojson.Basic.Util in
+  let parse name = j |> member name |> to_string |> color_of_string in
+  {
+    bg = parse "background";
+    keyword = parse "keyword";
+    symbol = parse "symbol";
+    number = parse "number";
+    other = parse "other";
+  }
+
+let default_color_config =
+  let open Notty.A in
+  let defaultmode =
+    {
+      bg = black;
+      keyword = yellow;
+      symbol = red;
+      number = green;
+      other = white;
+    }
+  in
+  {
+    cursor = { defaultmode with bg = white };
+    hl = { defaultmode with bg = blue };
+    default = defaultmode;
+  }
+
+let color_config =
+  try
+    let open Yojson.Basic.Util in
+    let file = Yojson.Basic.from_file "config/colors.json" in
+    {
+      cursor = file |> member "cursor" |> colormode_of_json;
+      hl = file |> member "highlight" |> colormode_of_json;
+      default = file |> member "standard" |> colormode_of_json;
+    }
+  with _ -> default_color_config
 
 let string_of_char = String.make 1
 
@@ -125,8 +103,8 @@ let rec string_list_of_string s =
          @@ (String.length s - 1))
 
 let tag_of_word w =
-  if List.mem w keywords then Keyword w
-  else if List.mem w symbols then Symbol w
+  if Str.string_match keyword_regex w 0 then Keyword w
+  else if Str.string_match symbol_regex w 0 then Symbol w
   else
     match (int_of_string_opt w, float_of_string_opt w) with
     | None, None -> Other w
@@ -153,26 +131,18 @@ let char_tags_of_word w =
 let char_tags_of_string s =
   tag_of_string s |> List.map char_tags_of_word |> List.flatten
 
-let label_to_image = function
-  | Keyword w -> I.string A.(fg yellow ++ bg black) w
-  | Symbol w -> I.string A.(fg red ++ bg black) w
-  | Number w -> I.string A.(fg green ++ bg black) w
-  | Other w -> I.string A.(fg white ++ bg black) w
+let label_to_image mode label =
+  let background = mode.bg in
+  match label with
+  | Keyword w -> I.string A.(fg mode.keyword ++ bg background) w
+  | Symbol w -> I.string A.(fg mode.symbol ++ bg background) w
+  | Number w -> I.string A.(fg mode.number ++ bg background) w
+  | Other w -> I.string A.(fg mode.other ++ bg background) w
 
 let label_to_image_hl_cursor hl cursor label =
-  if cursor then
-    match label with
-    | Keyword w -> I.string A.(fg yellow ++ bg white) w
-    | Symbol w -> I.string A.(fg red ++ bg white) w
-    | Number w -> I.string A.(fg green ++ bg white) w
-    | Other w -> I.string A.(fg white ++ bg white) w
-  else if hl then
-    match label with
-    | Keyword w -> I.string A.(fg yellow ++ bg blue) w
-    | Symbol w -> I.string A.(fg red ++ bg blue) w
-    | Number w -> I.string A.(fg green ++ bg blue) w
-    | Other w -> I.string A.(fg white ++ bg blue) w
-  else label_to_image label
+  if cursor then label_to_image color_config.cursor label
+  else if hl then label_to_image color_config.hl label
+  else label_to_image color_config.default label
 
 let image_of_string hl_opt cursor_opt s =
   let tagged = char_tags_of_string s in

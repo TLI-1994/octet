@@ -1,0 +1,23 @@
+{
+  "cursor": {
+    "background": "black",
+    "keyword": "yellow",
+    "symbol": "red",
+    "number": "green",
+    "other": "white"
+  },
+  "highlight": {
+    "background": "white",
+    "keyword": "yellow",
+    "symbol": "red",
+    "number": "green",
+    "other": "white"
+  },
+  "standard": {
+    "background": "black",
+    "keyword": "yellow",
+    "symbol": "red",
+    "number": "green",
+    "other": "white"
+  }
+}
