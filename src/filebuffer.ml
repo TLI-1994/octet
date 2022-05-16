@@ -206,8 +206,12 @@ struct
      I.width img - off > width then go (off + width) else []) in go 0 |>
      I.vcat |> I.hsnap ~align:`Left width *)
 
+<<<<<<< HEAD
   let crop_to width img = I.hcrop 0 (I.width img - width) img
   (* let cursor_icon = "⚛"
+=======
+  let cursor_icon = "⚛"
+>>>>>>> 8b465c4aedaaf104508a971e8f2875e9d59a25fd
 
      let cursor_image width = I.void width 1 <|> I.string A.(bg red ++
      st blink) cursor_icon *)
@@ -233,6 +237,7 @@ struct
       ^ string_of_int buffer.mark_pos)
     </> I.char A.(fg black ++ bg white) ' ' width 1
 
+<<<<<<< HEAD
   (* let add_cursor (line : image) (cursor_pos : int) = cursor_image
      cursor_pos </> line
 
@@ -284,6 +289,93 @@ struct
      buffer absolute_location elt show_cursor
 
      let _ = render_line let _ = wrap_to let _ = crop_to *)
+=======
+  let add_cursor (line : image) (cursor_pos : int) =
+    cursor_image cursor_pos </> line
+
+  let render_unselected (line : string) (active : bool) : image =
+    I.string
+      (if active then A.(fg lightwhite ++ bg lightblack) else A.empty)
+      line
+
+  let render_selected (line : string) : image =
+    I.string A.(bg lightblue) line
+
+  let render_beginning_selected
+      (line : string)
+      (pos : int)
+      (active : bool) : image =
+    let parts = Util.split_at_n line pos in
+    render_selected (List.nth parts 0)
+    <|> render_unselected (List.nth parts 1) active
+
+  let render_end_selected (line : string) (pos : int) (active : bool) :
+      image =
+    let parts = Util.split_at_n line pos in
+    render_unselected (List.nth parts 0) active
+    <|> render_selected (List.nth parts 1)
+
+  let render_selected_in_line
+      (line : string)
+      (s : int)
+      (e : int)
+      (active : bool) : image =
+    let parts = Util.split_at_n line e in
+    render_end_selected (List.nth parts 0) s active
+    <|> render_unselected (List.nth parts 1) active
+
+  let render_line_without_cursor
+      (buffer : t)
+      (absolute_line : int)
+      (line : string)
+      (active : bool) =
+    if buffer.mark_active then
+      let min_select = min buffer.cursor_line buffer.mark_line in
+      let max_select = max buffer.cursor_line buffer.mark_line in
+      let min_select_pos = min buffer.cursor_pos buffer.mark_pos in
+      let max_select_pos = max buffer.cursor_pos buffer.mark_pos in
+      let start_pos =
+        if buffer.cursor_line < buffer.mark_line then buffer.cursor_pos
+        else buffer.mark_pos
+      in
+      let end_pos =
+        if buffer.cursor_line > buffer.mark_line then buffer.cursor_pos
+        else buffer.mark_pos
+      in
+      if min_select = max_select && absolute_line = min_select then
+        (* one line *)
+        render_selected_in_line line min_select_pos max_select_pos
+          active
+      else if absolute_line < min_select then
+        render_unselected line active
+      else if absolute_line > max_select then
+        render_unselected line active
+      else if absolute_line = min_select then
+        render_end_selected line start_pos active
+      else if absolute_line = max_select then
+        render_beginning_selected line end_pos active
+      else render_selected line
+    else render_unselected line active
+
+  let render_line
+      (buffer : t)
+      (top_line : int)
+      (show_cursor : bool)
+      (i : int)
+      (elt : string) =
+    let absolute_location = i + top_line in
+    if absolute_location = buffer.cursor_line && show_cursor then
+      add_cursor
+        (render_line_without_cursor buffer absolute_location elt
+           show_cursor)
+        buffer.cursor_pos
+    else
+      render_line_without_cursor buffer absolute_location elt
+        show_cursor
+
+  let _ = render_line
+  let _ = wrap_to
+>>>>>>> 8b465c4aedaaf104508a971e8f2875e9d59a25fd
 
   let get_cursor_opt buffer show_cursor line_num =
     if not show_cursor then None
@@ -332,32 +424,26 @@ struct
   let rec to_image
       (buffer : t)
       (top_line : int)
-      ((width, height) : int * int)
+      ((w, h) : int * int)
       (show_cursor : bool) =
-    let height = height - 1 in
-    let width = width - 5 in
-    let buffer_contents = pad_to (width, height) buffer in
-    let line_nos = line_numbers height in
-    let remaining = Util.list_from_nth buffer_contents top_line in
+    let visual_h = h - 1 in
+    let visual_w = w - 5 in
+    let padded = pad_to (visual_w, visual_h) buffer in
+    let line_numbers = make_line_numbers visual_h in
+    let remaining = Util.list_from_nth padded top_line in
     let bounds = compute_hl_bounds buffer in
     let superimposed =
       List.mapi
         (fun i ->
           Orender.image_of_string
-            (get_hl_opt buffer width bounds i)
+            (get_hl_opt buffer visual_w bounds i)
             (get_cursor_opt buffer show_cursor i))
         remaining
     in
-    let widthcropped =
-      I.vcat (List.map (crop_to width) superimposed)
-      (* I.vcat superimposed *)
-    in
-    let heightcropped =
-      I.vcrop 0 (I.height widthcropped - height) widthcropped
-    in
-    line_nos <|> heightcropped <-> modeline_to_image buffer width
+    let heightcropped = crop_to (visual_w, visual_h) superimposed in
+    line_numbers <|> heightcropped <-> modeline_to_image buffer visual_w
 
-  and line_numbers h =
+  and make_line_numbers h =
     Util.from 0 (h - 1)
     |> List.map (fun d ->
            I.string A.(bg black ++ st italic) (Printf.sprintf "% 3d " d))
@@ -374,6 +460,18 @@ struct
       (fun s ->
         s ^ String.make (width - (String.length s mod width)) ' ')
       row_padded
+
+  and crop_to ((width, height) : int * int) img_lst =
+    let widthcropped =
+      I.vcat
+        (List.map
+           (fun img -> I.hcrop 0 (I.width img - width) img)
+           img_lst)
+    in
+    let heightcropped =
+      I.vcrop 0 (I.height widthcropped - height) widthcropped
+    in
+    heightcropped
 
   let update_on_key (buffer : t) (key : Unescape.key) =
     match key with

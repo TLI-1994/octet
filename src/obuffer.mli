@@ -68,5 +68,3 @@ module type MUT_FILEBUFFER = sig
 
   val paste_from_clipboard : t -> t
 end
-
-include MUT_FILEBUFFER

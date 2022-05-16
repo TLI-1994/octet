@@ -1,6 +1,3 @@
-open Notty
-open Notty.Infix
-
 module type MUT_BUFFER = sig
   type t
 
@@ -37,6 +34,7 @@ module type MUT_FILEBUFFER = sig
       signal sent by [key]. *)
 
   val paste_from_clipboard : t -> t
+<<<<<<< HEAD
 end
 
 type t = {
@@ -578,3 +576,6 @@ and insert_stream (buffer : t) (lst : char list) =
   | [] -> buffer
   | '\n' :: t -> insert_stream (insert_newline buffer) t
   | h :: t -> insert_stream (insert_ascii buffer h) t
+=======
+end
+>>>>>>> 8b465c4aedaaf104508a971e8f2875e9d59a25fd
