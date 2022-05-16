@@ -209,7 +209,6 @@ struct
     in
     go 0 |> I.vcat |> I.hsnap ~align:`Left width
 
-  let crop_to width img = I.hcrop 0 (I.width img - width) img
   let cursor_icon = "⚛"
 
   let cursor_image width =
@@ -321,7 +320,6 @@ struct
 
   let _ = render_line
   let _ = wrap_to
-  let _ = crop_to
 
   let get_cursor_opt buffer show_cursor line_num =
     if not show_cursor then None
@@ -367,55 +365,57 @@ struct
       else if start_line <= line && line <= end_line then Some (0, width)
       else None
 
-  let to_image
+  let rec to_image
       (buffer : t)
       (top_line : int)
-      ((width, height) : int * int)
+      ((w, h) : int * int)
       (show_cursor : bool) =
-    let height = height - 1 in
-    let width = width - 5 in
-    let buffer_contents =
+    let visual_h = h - 1 in
+    let visual_w = w - 5 in
+    let padded = pad_to (visual_w, visual_h) buffer in
+    let line_numbers = make_line_numbers visual_h in
+    let remaining = Util.list_from_nth padded top_line in
+    let bounds = compute_hl_bounds buffer in
+    let superimposed =
+      List.mapi
+        (fun i ->
+          Orender.image_of_string
+            (get_hl_opt buffer visual_w bounds i)
+            (get_cursor_opt buffer show_cursor i))
+        remaining
+    in
+    let heightcropped = crop_to (visual_w, visual_h) superimposed in
+    line_numbers <|> heightcropped <-> modeline_to_image buffer visual_w
+
+  and make_line_numbers h =
+    Util.from 0 (h - 1)
+    |> List.map (fun d ->
+           I.string A.(bg black ++ st italic) (Printf.sprintf "% 3d " d))
+    |> I.vcat
+
+  and pad_to ((width, height) : int * int) buffer =
+    let row_padded =
       let contents = buffer_contents buffer in
       let l = List.length contents in
       if l >= height then contents
       else contents @ List.map (fun _ -> "") (Util.from 0 (height - l))
     in
-    let buffer_contents =
-      List.map
-        (fun s ->
-          if String.length s < width then
-            s ^ String.make (width - String.length s) ' '
-          else s)
-        buffer_contents
-    in
-    let line_nos =
-      Util.from 0 (height - 1)
-      |> List.map (fun d ->
-             I.string
-               A.(bg black ++ st italic)
-               (Printf.sprintf "% 3d " d))
-      |> I.vcat
-    in
-    let remaining = Util.list_from_nth buffer_contents top_line in
-    let bounds = compute_hl_bounds buffer in
-    let superimposed =
-      (* List.mapi (render_line buffer top_line show_cursor)
-         remaining *)
-      List.mapi
-        (fun i ->
-          Orender.image_of_string
-            (get_hl_opt buffer width bounds i)
-            (get_cursor_opt buffer show_cursor i))
-        remaining
-    in
+    List.map
+      (fun s ->
+        s ^ String.make (width - (String.length s mod width)) ' ')
+      row_padded
+
+  and crop_to ((width, height) : int * int) img_lst =
     let widthcropped =
-      I.vcat (List.map (crop_to width) superimposed)
-      (* I.vcat superimposed *)
+      I.vcat
+        (List.map
+           (fun img -> I.hcrop 0 (I.width img - width) img)
+           img_lst)
     in
     let heightcropped =
       I.vcrop 0 (I.height widthcropped - height) widthcropped
     in
-    line_nos <|> heightcropped <-> modeline_to_image buffer width
+    heightcropped
 
   let update_on_key (buffer : t) (key : Unescape.key) =
     match key with
