@@ -367,18 +367,40 @@ struct
       else if start_line <= line && line <= end_line then Some (0, width)
       else None
 
-  let rec to_image
+  let to_image
       (buffer : t)
       (top_line : int)
       ((width, height) : int * int)
       (show_cursor : bool) =
     let height = height - 1 in
     let width = width - 5 in
-    let buffer_contents = pad_to (width, height) buffer in
-    let line_nos = line_numbers height in
+    let buffer_contents =
+      let contents = buffer_contents buffer in
+      let l = List.length contents in
+      if l >= height then contents
+      else contents @ List.map (fun _ -> "") (Util.from 0 (height - l))
+    in
+    let buffer_contents =
+      List.map
+        (fun s ->
+          if String.length s < width then
+            s ^ String.make (width - String.length s) ' '
+          else s)
+        buffer_contents
+    in
+    let line_nos =
+      Util.from 0 (height - 1)
+      |> List.map (fun d ->
+             I.string
+               A.(bg black ++ st italic)
+               (Printf.sprintf "% 3d " d))
+      |> I.vcat
+    in
     let remaining = Util.list_from_nth buffer_contents top_line in
     let bounds = compute_hl_bounds buffer in
     let superimposed =
+      (* List.mapi (render_line buffer top_line show_cursor)
+         remaining *)
       List.mapi
         (fun i ->
           Orender.image_of_string
@@ -394,24 +416,6 @@ struct
       I.vcrop 0 (I.height widthcropped - height) widthcropped
     in
     line_nos <|> heightcropped <-> modeline_to_image buffer width
-
-  and line_numbers h =
-    Util.from 0 (h - 1)
-    |> List.map (fun d ->
-           I.string A.(bg black ++ st italic) (Printf.sprintf "% 3d " d))
-    |> I.vcat
-
-  and pad_to ((width, height) : int * int) buffer =
-    let row_padded =
-      let contents = buffer_contents buffer in
-      let l = List.length contents in
-      if l >= height then contents
-      else contents @ List.map (fun _ -> "") (Util.from 0 (height - l))
-    in
-    List.map
-      (fun s ->
-        s ^ String.make (width - (String.length s mod width)) ' ')
-      row_padded
 
   let update_on_key (buffer : t) (key : Unescape.key) =
     match key with
