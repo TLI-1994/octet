@@ -172,6 +172,26 @@ struct
     Sys.command ("rm " ^ temp_path) |> ignore;
     { new_buffer with desc = fb.desc }
 
+  let rec paste_from_clipboard (buffer : t) =
+    let temp_path = "data/_temp.clipboard" in
+    Sys.command ("rm -rf " ^ temp_path) |> ignore;
+    Sys.command ("touch " ^ temp_path) |> ignore;
+    Sys.command ("pbpaste > " ^ temp_path) |> ignore;
+    let s = read_file temp_path in
+    let num_of_char = String.length s in
+    let clst =
+      List.init num_of_char (fun i ->
+          if i < num_of_char then String.get s i else '_')
+    in
+    Sys.command ("rm " ^ temp_path) |> ignore;
+    insert_stream buffer clst
+
+  and insert_stream (buffer : t) (lst : char list) =
+    match lst with
+    | [] -> buffer
+    | '\n' :: t -> insert_stream (insert_newline buffer) t
+    | h :: t -> insert_stream (insert_char buffer h) t
+
   let mv_cursor (buffer : t) direxn =
     match direxn with
     | `Up -> mv_up buffer

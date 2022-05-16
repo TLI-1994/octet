@@ -35,6 +35,8 @@ module type MUT_FILEBUFFER = sig
   val update_on_key : t -> Notty.Unescape.key -> t
   (** [handle_keystroke buffer key] is [buffer] updated according to the
       signal sent by [key]. *)
+
+  val paste_from_clipboard : t -> t
 end
 
 type t = {
@@ -389,6 +391,7 @@ let wrap_to width img =
   in
   go 0 |> I.vcat |> I.hsnap ~align:`Left width
 
+let crop_to width img = I.hcrop 0 (I.width img - width) img
 let cursor_icon = " "
 
 let cursor_image width =
@@ -491,6 +494,55 @@ let render_line
   else
     render_line_without_cursor buffer absolute_location elt show_cursor
 
+let _ = render_line
+
+let get_cursor_opt buffer show_cursor line_num =
+  if not show_cursor then None
+  else if buffer.cursor_line = line_num then Some buffer.cursor_pos
+  else None
+
+let compute_hl_bounds buffer =
+  match
+    ( buffer.mark_line < buffer.cursor_line,
+      buffer.mark_line > buffer.cursor_line )
+  with
+  | false, true ->
+      ( buffer.cursor_line,
+        buffer.cursor_pos,
+        buffer.mark_line,
+        buffer.mark_pos )
+  | true, false ->
+      ( buffer.mark_line,
+        buffer.mark_pos,
+        buffer.cursor_line,
+        buffer.cursor_pos )
+  | false, false ->
+      ( buffer.mark_line,
+        min buffer.mark_pos buffer.cursor_pos,
+        buffer.mark_line,
+        max buffer.mark_pos buffer.cursor_pos )
+  | _ -> failwith "RI violated"
+
+let get_hl_opt
+    buffer
+    width
+    (start_line, start_pos, end_line, end_pos)
+    line =
+  if not buffer.mark_active then None
+  else
+    let start_line, start_pos, end_line, end_pos =
+      (start_line, start_pos, end_line, end_pos)
+    in
+    if start_line = end_line && start_line = line then
+      Some (start_pos, end_pos)
+    else if start_line = line then Some (start_pos, width)
+    else if end_line = line then Some (0, end_pos)
+    else if start_line <= line && line <= end_line then Some (0, width)
+    else None
+
+let _ = (get_cursor_opt, get_hl_opt)
+let _ = wrap_to
+
 let to_image
     (buffer : t)
     (top_line : int)
@@ -520,10 +572,20 @@ let to_image
     |> I.vcat
   in
   let remaining = list_from_nth buffer_contents top_line in
+  let bounds = compute_hl_bounds buffer in
   let superimposed =
-    List.mapi (render_line buffer top_line show_cursor) remaining
+    (* List.mapi (render_line buffer top_line show_cursor) remaining *)
+    List.mapi
+      (fun i ->
+        Orender.image_of_string
+          (get_hl_opt buffer width bounds i)
+          (get_cursor_opt buffer show_cursor i))
+      remaining
   in
-  let widthcropped = I.vcat (List.map (wrap_to width) superimposed) in
+  let widthcropped =
+    I.vcat (List.map (crop_to width) superimposed)
+    (* I.vcat superimposed *)
+  in
   let heightcropped =
     I.vcrop 0 (I.height widthcropped - height) widthcropped
   in
@@ -538,3 +600,23 @@ let ocaml_format (buffer : t) =
   let new_buffer = from_file temp_path in
   let _ = Sys.command ("rm " ^ temp_path) in
   { new_buffer with desc = buffer.desc }
+
+let rec paste_from_clipboard (buffer : t) =
+  let temp_path = "data/_temp.clipboard" in
+  Sys.command ("rm -rf " ^ temp_path) |> ignore;
+  Sys.command ("touch " ^ temp_path) |> ignore;
+  Sys.command ("pbpaste > " ^ temp_path) |> ignore;
+  let s = read_file temp_path in
+  let num_of_char = String.length s in
+  let clst =
+    List.init num_of_char (fun i ->
+        if i < num_of_char then String.get s i else '_')
+  in
+  Sys.command ("rm " ^ temp_path) |> ignore;
+  insert_stream buffer clst
+
+and insert_stream (buffer : t) (lst : char list) =
+  match lst with
+  | [] -> buffer
+  | '\n' :: t -> insert_stream (insert_newline buffer) t
+  | h :: t -> insert_stream (insert_ascii buffer h) t

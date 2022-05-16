@@ -65,6 +65,8 @@ module type MUT_FILEBUFFER = sig
   val update_on_key : t -> Notty.Unescape.key -> t
   (** [update_on_key buffer key] is [buffer] updated according to the
       signal sent by [key]. *)
+
+  val paste_from_clipboard : t -> t
 end
 
 include MUT_FILEBUFFER

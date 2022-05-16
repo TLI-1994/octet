@@ -14,6 +14,7 @@ module type BUFFER_MANAGER = sig
   val update_all : Notty.Unescape.key -> t -> t
   val autoformat : t -> t
   val write_all : t -> unit
+  val paste_from_clipboard : t -> t
   val ( <-> ) : t -> t -> t
   val ( <|> ) : t -> t -> t
   val to_image : int * int -> t -> Notty.image
@@ -148,6 +149,18 @@ module Make (FileBuffer : Obuffer.MUT_FILEBUFFER) = struct
         write_all t2
     | Leaf r -> FileBuffer.write_to_file r.buffer
     | Minibuffer _ -> ()
+
+  let rec paste_from_clipboard = function
+    | Hsplit (t1, t2) ->
+        Hsplit (paste_from_clipboard t1, paste_from_clipboard t2)
+    | Vsplit (t1, t2) ->
+        Vsplit (paste_from_clipboard t1, paste_from_clipboard t2)
+    | Leaf r ->
+        if r.active then
+          Leaf
+            { r with buffer = FileBuffer.paste_from_clipboard r.buffer }
+        else Leaf r
+    | Minibuffer _ as m -> m
 
   let ( <-> ) bm1 bm2 = Hsplit (bm1, bm2)
   let ( <|> ) bm1 bm2 = Vsplit (bm1, bm2)

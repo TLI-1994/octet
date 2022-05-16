@@ -8,3 +8,7 @@ Empty Buffer
 # bisect
 _coverage
 bisect*.coverage
+*.coverage
+*.js
+*.html
+*.css

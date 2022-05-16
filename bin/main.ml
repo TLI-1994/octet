@@ -1,8 +1,8 @@
 open Notty_unix
 open Octet
-module FileBuffer = Filebuffer.Make (Gapbuffer)
-(* module FileBuffer = Obuffer *)
+module FileBuffer = Filebuffer.Make (Bytebuffer)
 
+(* module FileBuffer = Obuffer *)
 open Buffermanager.Make (FileBuffer)
 
 let init_l =
@@ -18,6 +18,8 @@ let main =
   and loop t state =
     match Term.event t with
     | `Key (`ASCII 'N', [ `Ctrl ]) -> update t (autoformat state)
+    | `Key (`ASCII 'P', [ `Ctrl ]) ->
+        update t (paste_from_clipboard state)
     | `Key (`ASCII 'X', [ `Ctrl ]) -> (
         match Term.event t with
         | `Key (`ASCII 'B', [ `Ctrl ]) -> update t (minibuffer_on state)
