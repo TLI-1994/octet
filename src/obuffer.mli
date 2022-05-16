@@ -67,4 +67,4 @@ module type MUT_FILEBUFFER = sig
       signal sent by [key]. *)
 end
 
-include MUT_FILEBUFFER
+(* include MUT_FILEBUFFER *)

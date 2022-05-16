@@ -215,6 +215,8 @@ module Buffer_Tests (Buffer : Obuffer.MUT_BUFFER) : Tests = struct
         (Delete, "abcxdk", "ij");
         (Moveto 0, "", "abcxdkij");
         (Delete, "", "abcxdkij");
+        (Moveto 1, "a", "bcxdkij");
+        (Delete, "", "bcxdkij");
       ]
 
   let tests = List.flatten [ basic_tests; sequence_test ]
@@ -222,6 +224,7 @@ end
 
 module BytebufferTests = Buffer_Tests (Bytebuffer)
 module GapbufferTests = Buffer_Tests (Gapbuffer)
+module StringbufferTests = Buffer_Tests (Stringbuffer)
 
 module UtilTests : Tests = struct
   let insert_test
@@ -386,6 +389,7 @@ let tests =
          [
            BytebufferTests.tests;
            GapbufferTests.tests;
+           StringbufferTests.tests;
            UtilTests.tests;
            FilebufferTests.tests;
          ]
