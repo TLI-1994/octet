@@ -1,6 +1,5 @@
 open OUnit2
 open Octet
-open Util
 (* Testing plan:
 
    We have tested our backend using OUnit test cases. We developed our
@@ -71,7 +70,7 @@ module type MUT_BUFFER_TEST_ENV = sig
 end
 
 module TestEnv_of_Buffer (Buffer : Obuffer.MUT_BUFFER) :
-  MUT_BUFFER_TEST_ENV = struct
+  MUT_BUFFER_TEST_ENV with type t = Buffer.t = struct
   include Buffer
 
   let contents_size_test
@@ -171,7 +170,7 @@ module Buffer_Tests (Buffer : Obuffer.MUT_BUFFER) : Tests = struct
   open TestEnv_of_Buffer (Buffer)
 
   let basic_tests =
-    pam (make "ab" 5)
+    Util.pam (make "ab" 5)
       [
         buffer_string_test "initial contents are \"ab\"" "ab";
         insert_buffer_test "insert c to get \"abc\"" 'c' "abc";
@@ -223,16 +222,7 @@ module Buffer_Tests (Buffer : Obuffer.MUT_BUFFER) : Tests = struct
 end
 
 module UtilTests : Tests = struct
-  let insert_test
-      (name : string)
-      (input_line : string)
-      (i : int)
-      (c : char)
-      (expected_output : string) : test =
-    name >:: fun _ ->
-    assert_equal expected_output
-      (insert_at_n input_line i c)
-      ~printer:String.escaped
+  open Util
 
   let split_test
       (name : string)
@@ -242,27 +232,10 @@ module UtilTests : Tests = struct
     name >:: fun _ ->
     assert_equal expected_output
       (split_at_n input_line i)
-      ~printer:(Util.string_of_list String.escaped)
-
-  let delete_test
-      (name : string)
-      (input_line : string)
-      (i : int)
-      (expected_output : string) : test =
-    name >:: fun _ ->
-    assert_equal expected_output
-      (delete_nth input_line i)
-      ~printer:String.escaped
+      ~printer:(string_of_list String.escaped)
 
   let tests =
     [
-      insert_test "insert at start of string" "hello world" 0 'g'
-        "ghello world";
-      insert_test "insert into empty string" "" 0 'g' "g";
-      insert_test "insert into newline-terminated string"
-        "hello world\n" 5 't' "hellot world\n";
-      insert_test "insert into end of newline-terminated string"
-        "hello world\n" 11 '!' "hello world!\n";
       split_test "split in middle of string" "hello world" 5
         [ "hello"; " world" ];
       split_test "split at beginning of string" "hello world" 0
@@ -270,14 +243,49 @@ module UtilTests : Tests = struct
       split_test "split at end of string" "hello world" 11
         [ "hello world"; "" ];
       split_test "split empty string" "" 0 [ ""; "" ];
-      delete_test "delete single-char string" "0" 0 "";
-      delete_test "delete middle of string" "abcd" 1 "acd";
-      delete_test "delete end of string" "abcd" 3 "abc";
     ]
 end
 
-module FilebufferTests (Filebuffer : Obuffer.MUT_FILEBUFFER) : Tests =
-struct
+module type FILE_BUFFER_TEST_ENV = sig
+  include Obuffer.MUT_FILEBUFFER
+
+  val contents_test : string -> string list -> t -> test
+  (** [contents_test name expected fb] creates an OUnit test with label
+      [name] to check that [buffer_contents fb] matches [expected]. *)
+
+  val insert_test : string -> char -> string list -> t -> test
+  (** [insert_test name c expected fb] creates an OUnit test with label
+      [name] to insert [c] into [fb] and then check that
+      [buffer_contents fb] matches [expected]. *)
+
+  val delete_test : string -> string list -> t -> test
+  (** [delete_test name expected fb] creates an OUnit test with label
+      [name] to delete a character at the current cursor position of
+      [fb] and then check that [buffer_contents fb] matches [expected]. *)
+
+  val insert_newline_test : string -> string list -> t -> test
+  (** [insert_newline_test name expected fb] creates an OUnit test with
+      label [name] to insert ['\n'] into [fb] and then check that
+      [buffer_contents fb] matches [expected]. *)
+
+  val mv_insert_test :
+    string ->
+    [ `Down | `Left | `Right | `Up ] ->
+    char ->
+    int ->
+    string list ->
+    t ->
+    test
+  (** [mv_insert_test name dir c n expected fb] creates an OUnit test
+      with label [name] to move in the direction [dir] [n] times, and
+      then insert [c] and check that the [buffer_contents fb] matches
+      [expected]. *)
+end
+
+module TestEnv_of_FileBuffer (Filebuffer : Obuffer.MUT_FILEBUFFER) :
+  FILE_BUFFER_TEST_ENV with type t = Filebuffer.t = struct
+  include Filebuffer
+
   let contents_test name expected fb =
     name >:: fun _ ->
     assert_equal expected
@@ -305,7 +313,7 @@ struct
        Filebuffer.buffer_contents fb)
       ~printer:(Util.string_of_list String.escaped)
 
-  let mv_test name direxn c n expected fb =
+  let mv_insert_test name direxn c n expected fb =
     let mv_fun fb = Filebuffer.update_on_key fb (`Arrow direxn, []) in
     let rec mv_n fb = function
       | 0 -> ()
@@ -317,18 +325,39 @@ struct
        Filebuffer.update_on_key fb (`ASCII c, []) |> ignore;
        Filebuffer.buffer_contents fb)
       ~printer:(Util.string_of_list String.escaped)
+end
 
-  let tests =
-    pam (Filebuffer.empty ())
+module FilebufferTests (Filebuffer : Obuffer.MUT_FILEBUFFER) : Tests =
+struct
+  open TestEnv_of_FileBuffer (Filebuffer)
+
+  let read_tests =
+    Util.pam
+      (from_file "test/test_input_1.txt")
+      [
+        contents_test "read from input file"
+          [ "hello world! it is a nice day"; "" ];
+        insert_newline_test "insert another new line"
+          [ ""; "hello world! it is a nice day"; "" ];
+        mv_insert_test
+          "move to end of file (with extra down keypresses) and insert \
+           'n'"
+          `Down 'n' 5
+          [ ""; "hello world! it is a nice day"; "n" ];
+      ]
+
+  let sequence_tests =
+    Util.pam (Filebuffer.empty ())
       [
         contents_test "empty buffer has no contents" [ "" ];
         insert_test "insert first character into buffer" 'a' [ "a" ];
         insert_test "insert second character into buffer" 'b' [ "ab" ];
         delete_test "delete last character" [ "a" ];
-        mv_test "move to left of line" `Left 'z' 1 [ "za" ];
+        mv_insert_test "move to left of line" `Left 'z' 1 [ "za" ];
         delete_test "delete first character" [ "a" ];
         delete_test "deleting at index 0 has no effect" [ "a" ];
-        mv_test "move right and re-insert 'b'" `Right 'b' 1 [ "ab" ];
+        mv_insert_test "move right and re-insert 'b'" `Right 'b' 1
+          [ "ab" ];
         insert_newline_test "insert new line into buffer" [ "ab"; "" ];
         insert_test "insert into newline" 'c' [ "ab"; "c" ];
         insert_newline_test "insert another new line" [ "ab"; "c"; "" ];
@@ -338,7 +367,7 @@ struct
           [ "ab"; "c"; "dx" ];
         insert_test "insert third character into new line" 'e'
           [ "ab"; "c"; "dxe" ];
-        mv_test "move left and insert 'y'" `Left 'y' 1
+        mv_insert_test "move left and insert 'y'" `Left 'y' 1
           [ "ab"; "c"; "dxye" ];
         insert_test "insert 'z' in third line" 'z'
           [ "ab"; "c"; "dxyze" ];
@@ -348,28 +377,30 @@ struct
           [ "ab"; "c"; "dxe" ];
         delete_test "delete second character of third line"
           [ "ab"; "c"; "de" ];
-        mv_test "move up 1" `Up 'f' 1 [ "ab"; "cf"; "de" ];
-        mv_test "move down 1" `Down 'g' 1 [ "ab"; "cf"; "deg" ];
-        mv_test "move down 100" `Down 'h' 100 [ "ab"; "cf"; "degh" ];
-        mv_test "move up 100" `Up 'i' 100 [ "abi"; "cf"; "degh" ];
+        mv_insert_test "move up 1" `Up 'f' 1 [ "ab"; "cf"; "de" ];
+        mv_insert_test "move down 1" `Down 'g' 1 [ "ab"; "cf"; "deg" ];
+        mv_insert_test "move down 100" `Down 'h' 100
+          [ "ab"; "cf"; "degh" ];
+        mv_insert_test "move up 100" `Up 'i' 100 [ "abi"; "cf"; "degh" ];
         insert_newline_test "insert new line after move up"
           [ "abi"; ""; "cf"; "degh" ];
-        mv_test "move down respects position cache 1" `Down 'j' 1
+        mv_insert_test "move down respects position cache 1" `Down 'j' 1
           [ "abi"; ""; "jcf"; "degh" ];
-        mv_test "move down respects position cache 2" `Down 'k' 1
+        mv_insert_test "move down respects position cache 2" `Down 'k' 1
           [ "abi"; ""; "jcf"; "dkegh" ];
-        mv_test "move up respects position cache" `Up 'l' 3
+        mv_insert_test "move up respects position cache" `Up 'l' 3
           [ "abli"; ""; "jcf"; "dkegh" ];
-        mv_test "move down respects position cache 3" `Down 'm' 3
+        mv_insert_test "move down respects position cache 3" `Down 'm' 3
           [ "abli"; ""; "jcf"; "dkemgh" ];
-        mv_test "mv left" `Left 'n' 1 [ "abli"; ""; "jcf"; "dkenmgh" ];
-        mv_test "mv left 100" `Left 'o' 100
+        mv_insert_test "mv left" `Left 'n' 1
+          [ "abli"; ""; "jcf"; "dkenmgh" ];
+        mv_insert_test "mv left 100" `Left 'o' 100
           [ "abli"; ""; "jcf"; "odkenmgh" ];
-        mv_test "mv right" `Right 'p' 1
+        mv_insert_test "mv right" `Right 'p' 1
           [ "abli"; ""; "jcf"; "odpkenmgh" ];
-        mv_test "mv right 100" `Right 'q' 100
+        mv_insert_test "mv right 100" `Right 'q' 100
           [ "abli"; ""; "jcf"; "odpkenmghq" ];
-        mv_test "mv left 5" `Left 'r' 5
+        mv_insert_test "mv left 5" `Left 'r' 5
           [ "abli"; ""; "jcf"; "odpkernmghq" ];
         insert_newline_test "insert newline in the middle of a line"
           [ "abli"; ""; "jcf"; "odpker"; "nmghq" ];
@@ -379,23 +410,42 @@ struct
           [ "abli"; ""; "jcf"; "odpker"; "nmghq" ];
         insert_test "insert works well after inserting newline" 's'
           [ "abli"; ""; "jcf"; "odpker"; "snmghq" ];
-        mv_test "mv up works well after inserting newline" `Up 't' 1
+        mv_insert_test "mv up works well after inserting newline" `Up
+          't' 1
           [ "abli"; ""; "jcf"; "otdpker"; "snmghq" ];
       ]
+
+  let tests = read_tests @ sequence_tests
 end
 
-let all_tests =
+let buffer_tests =
   [
     (module Bytebuffer : Obuffer.MUT_BUFFER);
     (module Gapbuffer : Obuffer.MUT_BUFFER);
     (module Stringbuffer : Obuffer.MUT_BUFFER);
   ]
-  |> List.map (fun m ->
+  |> List.map (fun (m : (module Obuffer.MUT_BUFFER)) ->
          let module M = (val m : Obuffer.MUT_BUFFER) in
          let module N = Buffer_Tests (M) in
          let module N' = FilebufferTests (Filebuffer.Make (M)) in
          N.tests @ N'.tests)
   |> List.flatten
 
-let tests = "test suite for project" >::: all_tests
+let render_test name input expected =
+  name >:: fun _ ->
+  assert_equal expected (Orender.char_tags_of_string_debug input)
+    ~printer:(fun x -> x)
+
+let rendering_tests =
+  [
+    render_test "test" "let 1 = 3" "KlKeKtO N1O S=O N3";
+    render_test "test" "(* An alias for the type of lists. *)"
+      "S(S*O OAOnO OaOlOiOaOsO KfKoKrO OtOhOeO KtKyKpKeO KoKfO \
+       OlOiOsOtOsS.O S*S)";
+  ]
+
+let tests =
+  "test suite for project"
+  >::: List.flatten [ buffer_tests; rendering_tests ]
+
 let _ = run_test_tt_main tests
