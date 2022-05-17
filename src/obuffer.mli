@@ -23,13 +23,13 @@ module type MUT_BUFFER = sig
   (** [left buf] moves the cursor left one character. *)
 
   val right : t -> unit
-  (** move the cursor right *)
+  (** [right buf] moves the cursor right by one character. *)
 
   val move_to : t -> int -> unit
-  (** move the cursor to a given position *)
+  (** [move_to buf pos] moves the cursor to [pos]. *)
 
   val content_size : t -> int
-  (** query how many characters are there in a buffer *)
+  (** [content_size buf] is the number of characters [buf] is holding. *)
 end
 
 module type MUT_FILEBUFFER = sig
