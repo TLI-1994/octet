@@ -202,15 +202,6 @@ struct
   open Notty
   open Notty.Infix
 
-  (* let wrap_to width img = let rec go off = I.hcrop off 0 img :: (if
-     I.width img - off > width then go (off + width) else []) in go 0 |>
-     I.vcat |> I.hsnap ~align:`Left width *)
-
-  let cursor_icon = "⚛"
-
-  let cursor_image width =
-    I.void width 1 <|> I.string A.(bg red ++ st blink) cursor_icon
-
   let toggle_mark (buffer : t) =
     {
       buffer with
@@ -231,91 +222,6 @@ struct
       ^ "  Col: "
       ^ string_of_int buffer.mark_pos)
     </> I.char A.(fg black ++ bg white) ' ' width 1
-
-  let add_cursor (line : image) (cursor_pos : int) =
-    cursor_image cursor_pos </> line
-
-  let render_unselected (line : string) (active : bool) : image =
-    I.string
-      (if active then A.(fg lightwhite ++ bg lightblack) else A.empty)
-      line
-
-  let render_selected (line : string) : image =
-    I.string A.(bg lightblue) line
-
-  let render_beginning_selected
-      (line : string)
-      (pos : int)
-      (active : bool) : image =
-    let parts = Util.split_at_n line pos in
-    render_selected (List.nth parts 0)
-    <|> render_unselected (List.nth parts 1) active
-
-  let render_end_selected (line : string) (pos : int) (active : bool) :
-      image =
-    let parts = Util.split_at_n line pos in
-    render_unselected (List.nth parts 0) active
-    <|> render_selected (List.nth parts 1)
-
-  let render_selected_in_line
-      (line : string)
-      (s : int)
-      (e : int)
-      (active : bool) : image =
-    let parts = Util.split_at_n line e in
-    render_end_selected (List.nth parts 0) s active
-    <|> render_unselected (List.nth parts 1) active
-
-  let render_line_without_cursor
-      (buffer : t)
-      (absolute_line : int)
-      (line : string)
-      (active : bool) =
-    if buffer.mark_active then
-      let min_select = min buffer.cursor_line buffer.mark_line in
-      let max_select = max buffer.cursor_line buffer.mark_line in
-      let min_select_pos = min buffer.cursor_pos buffer.mark_pos in
-      let max_select_pos = max buffer.cursor_pos buffer.mark_pos in
-      let start_pos =
-        if buffer.cursor_line < buffer.mark_line then buffer.cursor_pos
-        else buffer.mark_pos
-      in
-      let end_pos =
-        if buffer.cursor_line > buffer.mark_line then buffer.cursor_pos
-        else buffer.mark_pos
-      in
-      if min_select = max_select && absolute_line = min_select then
-        (* one line *)
-        render_selected_in_line line min_select_pos max_select_pos
-          active
-      else if absolute_line < min_select then
-        render_unselected line active
-      else if absolute_line > max_select then
-        render_unselected line active
-      else if absolute_line = min_select then
-        render_end_selected line start_pos active
-      else if absolute_line = max_select then
-        render_beginning_selected line end_pos active
-      else render_selected line
-    else render_unselected line active
-
-  let render_line
-      (buffer : t)
-      (top_line : int)
-      (show_cursor : bool)
-      (i : int)
-      (elt : string) =
-    let absolute_location = i + top_line in
-    if absolute_location = buffer.cursor_line && show_cursor then
-      add_cursor
-        (render_line_without_cursor buffer absolute_location elt
-           show_cursor)
-        buffer.cursor_pos
-    else
-      render_line_without_cursor buffer absolute_location elt
-        show_cursor
-
-  let _ = render_line
 
   let get_cursor_opt buffer show_cursor line_num =
     if not show_cursor then None

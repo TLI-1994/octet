@@ -111,7 +111,10 @@ let tag_of_word w =
     | _ -> Number w
 
 let rec insert_spaces l =
-  match l with [] -> [] | h :: t -> h :: " " :: insert_spaces t
+  match l with
+  | [] -> []
+  | [ h ] -> [ h ]
+  | h :: t -> h :: " " :: insert_spaces t
 
 let tag_of_string s =
   String.split_on_char ' ' s |> insert_spaces |> List.map tag_of_word
@@ -130,6 +133,19 @@ let char_tags_of_word w =
 
 let char_tags_of_string s =
   tag_of_string s |> List.map char_tags_of_word |> List.flatten
+
+let debug_aux l =
+  match l with
+  | Keyword w -> [ "K"; w ]
+  | Symbol w -> [ "S"; w ]
+  | Number w -> [ "N"; w ]
+  | Other w -> [ "O"; w ]
+
+let string_of_string_list = List.fold_left ( ^ ) ""
+
+let char_tags_of_string_debug s =
+  char_tags_of_string s |> List.map debug_aux |> List.flatten
+  |> string_of_string_list
 
 let label_to_image mode label =
   let background = mode.bg in

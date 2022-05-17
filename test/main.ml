@@ -374,6 +374,19 @@ module FilebufferTests : Tests = struct
     ]
 end
 
+let render_test name input expected =
+  name >:: fun _ ->
+  assert_equal expected (Orender.char_tags_of_string_debug input)
+    ~printer:(fun x -> x)
+
+let rendering_tests =
+  [
+    render_test "test" "let 1 = 3" "KlKeKtO N1O S=O N3";
+    render_test "test" "(* An alias for the type of lists. *)"
+      "S(S*O OAOnO OaOlOiOaOsO KfKoKrO OtOhOeO KtKyKpKeO KoKfO \
+       OlOiOsOtOsS.O S*S)";
+  ]
+
 let tests =
   "test suite for project"
   >::: List.flatten
@@ -383,6 +396,7 @@ let tests =
            StringbufferTests.tests;
            UtilTests.tests;
            FilebufferTests.tests;
+           rendering_tests;
          ]
 
 let _ = run_test_tt_main tests
