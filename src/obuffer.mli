@@ -1,7 +1,8 @@
+(** Buffer types. *)
+
 module type MUT_BUFFER = sig
   type t
-  (** [t] is the type of a mutable buffer for the contents of a line,
-      with a resizable backing array. *)
+  (** [t] is the type of a mutable buffer for the contents of a line. *)
 
   val make : string -> int -> t
   (** [make str len] creates a buffer that can support strings of size
