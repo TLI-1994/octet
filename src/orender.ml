@@ -1,4 +1,5 @@
 open Notty
+open Util
 
 type label =
   | Keyword of string
@@ -91,17 +92,6 @@ let color_config =
     }
   with _ -> default_color_config
 
-let string_of_char = String.make 1
-
-let rec string_list_of_string s =
-  match s with
-  | "" -> []
-  | s ->
-      String.get s 0 |> string_of_char |> fun x ->
-      x
-      :: (string_list_of_string @@ String.sub s 1
-         @@ (String.length s - 1))
-
 let tag_of_word w =
   if Str.string_match keyword_regex w 0 then Keyword w
   else if Str.string_match symbol_regex w 0 then Symbol w
@@ -140,8 +130,6 @@ let debug_aux l =
   | Symbol w -> [ "S"; w ]
   | Number w -> [ "N"; w ]
   | Other w -> [ "O"; w ]
-
-let string_of_string_list = List.fold_left ( ^ ) ""
 
 let char_tags_of_string_debug s =
   char_tags_of_string s |> List.map debug_aux |> List.flatten
