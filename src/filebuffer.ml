@@ -105,60 +105,53 @@ struct
         fb.cursor_pos_cache <- pos;
         fb
 
-  let rec mv_current_line_while
-      (mv : t -> t)
-      (s : string)
-      (fb : t)
-      (f : string -> t -> bool) =
-    if not (f s fb) then fb
-    else begin
-      mv fb |> ignore;
-      mv_current_line_while mv s fb f
+  let rec update_while (modifier : t -> t) (fb : t) (cont : t -> bool) =
+    if cont fb then begin
+      modifier fb |> ignore;
+      update_while modifier fb cont
     end
+    else fb
 
-  let rec forward_word fb =
-    match fb.front with
-    | [] -> failwith "no front buffer?"
-    | h :: _ ->
-        let s = LineBuffer.to_string h in
-        forward_word_aux s fb
-
-  and forward_word_aux (s : string) (fb : t) =
-    if fb.cursor_pos = String.length s then fb
+  and forward_aux (modifier : t -> t) (fb : t) =
+    if at_end fb then fb
+    else if on_space fb ~offset:0 then begin
+      update_while modifier fb (fun fb ->
+          at_end fb |> not && on_space fb ~offset:0)
+      |> ignore;
+      forward_aux modifier fb
+    end
     else
-      let not_at_end fb = fb.cursor_pos <> String.length s in
-      if String.get s fb.cursor_pos = ' ' then begin
-        mv_current_line_while mv_right s fb (fun s fb ->
-            not_at_end fb && String.get s fb.cursor_pos = ' ')
-        |> ignore;
-        forward_word_aux s fb
-      end
-      else
-        mv_current_line_while mv_right s fb (fun s fb ->
-            not_at_end fb && String.get s fb.cursor_pos <> ' ')
+      update_while modifier fb (fun fb ->
+          at_end fb |> not && on_space fb ~offset:0 |> not)
 
-  let rec backward_word fb =
-    match fb.front with
-    | [] -> failwith "no front buffer?"
-    | h :: _ ->
-        let s = LineBuffer.to_string h in
-        backward_word_aux s fb
-
-  and backward_word_aux (s : string) (fb : t) =
-    if fb.cursor_pos = 0 then fb
+  and backward_aux (modifier : t -> t) (fb : t) =
+    if at_begin fb then fb
+    else if on_space fb ~offset:~-1 then begin
+      update_while modifier fb (fun fb ->
+          at_begin fb |> not && on_space fb ~offset:~-1)
+      |> ignore;
+      backward_aux modifier fb
+    end
     else
-      let not_at_begin fb = fb.cursor_pos <> 0 in
-      if String.get s (fb.cursor_pos - 1) = ' ' then begin
-        mv_current_line_while mv_left s fb (fun s fb ->
-            not_at_begin fb && String.get s (fb.cursor_pos - 1) = ' ')
-        |> ignore;
-        backward_word_aux s fb
-      end
-      else
-        mv_current_line_while mv_left s fb (fun s fb ->
-            not_at_begin fb && String.get s (fb.cursor_pos - 1) <> ' ')
+      update_while modifier fb (fun fb ->
+          at_begin fb |> not && on_space fb ~offset:~-1 |> not)
 
-  let delete fb =
+  and at_end fb =
+    fb.cursor_pos
+    = (List.hd fb.front |> LineBuffer.to_string |> String.length)
+
+  and at_begin fb = fb.cursor_pos = 0
+
+  and on_space fb ~offset:os =
+    String.get
+      (List.hd fb.front |> LineBuffer.to_string)
+      (fb.cursor_pos + os)
+    = ' '
+
+  let forward_word fb = forward_aux mv_right fb
+  let backward_word fb = backward_aux mv_left fb
+
+  let rec delete fb =
     begin
       match fb.front with
       | [] -> failwith "no front buffer?"
@@ -179,6 +172,9 @@ struct
           fb.cursor_pos_cache <- max 0 (fb.cursor_pos_cache - 1)
     end;
     fb
+
+  and backward_kill fb = backward_aux delete fb
+  and forward_kill fb = forward_aux (fun fb -> mv_right fb |> delete) fb
 
   let buffer_contents fb =
     List.rev_append fb.back fb.front (* line buffers in reverse order *)
@@ -472,6 +468,8 @@ struct
     | `ASCII 'P', [ `Ctrl ] -> toggle_mark buffer
     | `ASCII 'F', [ `Ctrl ] -> forward_word buffer
     | `ASCII 'B', [ `Ctrl ] -> backward_word buffer
+    | `Backspace, [ `Meta ] -> backward_kill buffer
+    | `ASCII 'd', [ `Meta ] -> forward_kill buffer
     | `ASCII ch, _ -> insert_char buffer ch
     | `Backspace, _ | `Delete, _ -> delete buffer
     | `Arrow direxn, _ -> mv_cursor buffer direxn
