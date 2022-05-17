@@ -379,12 +379,80 @@ let render_test name input expected =
   assert_equal expected (Orender.char_tags_of_string_debug input)
     ~printer:(fun x -> x)
 
+(* We use https://github.com/ocaml/ocaml/blob/trunk/stdlib/list.ml as
+   sample code for most of our rendering tests*)
 let rendering_tests =
   [
-    render_test "test" "let 1 = 3" "KlKeKtO N1O S=O N3";
-    render_test "test" "(* An alias for the type of lists. *)"
+    render_test "OCaml List comment"
+      "(* An alias for the type of lists. *)"
       "S(S*O OAOnO OaOlOiOaOsO KfKoKrO OtOhOeO KtKyKpKeO KoKfO \
        OlOiOsOtOsS.O S*S)";
+    render_test "OCaml List type"
+      "type 'a t = 'a list = [] | (::) of 'a * 'a list"
+      "KtKyKpKeO S'OaO OtO S=O S'OaO OlOiOsOtO S=O S[S]O S|O S(S:S:S)O \
+       KoKfO S'OaO S*O S'OaO OlOiOsOt";
+    render_test "OCaml List length function"
+      "let rec length_aux len = function [] -> len | _::l -> \
+       length_aux (len + 1) l"
+      "KlKeKtO KrKeKcO OlOeOnOgOtOhS_OaOuOxO OlOeOnO S=O \
+       KfKuKnKcKtKiKoKnO S[S]O S-S>O OlOeOnO S|O S_S:S:OlO S-S>O \
+       OlOeOnOgOtOhS_OaOuOxO S(OlOeOnO S+O N1S)O Ol";
+    render_test "OCaml List cons function" "let cons a l = a::l"
+      "KlKeKtO OcOoOnOsO OaO OlO S=O OaS:S:Ol";
+    render_test "OCaml List nth function line 1" "let nth l n ="
+      "KlKeKtO OnOtOhO OlO OnO S=";
+    render_test "OCaml List nth function line 2"
+      {|  if n < 0 then invalid_arg "List.nth" else|}
+      "O O KiKfO OnO S<O N0O KtKhKeKnO OiOnOvOaOlOiOdS_OaOrOgO \
+       O\"OLOiOsOtS.OnOtOhO\"O KeKlKsKe";
+    render_test "OCaml List nth function line 3"
+      {|  let rec nth_aux l n =|}
+      "O O KlKeKtO KrKeKcO OnOtOhS_OaOuOxO OlO OnO S=";
+    render_test "OCaml List nth function line 4" {|    match l with|}
+      "O O O O KmKaKtKcKhO OlO KwKiKtKh";
+    render_test "OCaml List nth function line 5"
+      {|    | [] -> failwith "nth"|}
+      "O O O O S|O S[S]O S-S>O OfOaOiOlOwOiOtOhO O\"OnOtOhO\"";
+    render_test "OCaml List nth function line 6"
+      {|    | a::l -> if n = 0 then a else nth_aux l (n-1)|}
+      "O O O O S|O OaS:S:OlO S-S>O KiKfO OnO S=O N0O KtKhKeKnO OaO \
+       KeKlKsKeO OnOtOhS_OaOuOxO OlO S(OnS-N1S)";
+    render_test "OCaml List nth function line 7" {|  in nth_aux l n|}
+      "O O KiKnO OnOtOhS_OaOuOxO OlO On";
+    render_test "OCaml List comparison long comment"
+      "(* Note: we are *not* shortcutting the list by using \
+       [List.compare_lengths] first; this may be slower on long lists \
+       immediately start with distinct elements. It is also incorrect \
+       for [compare] below, and it is better (principle of least \
+       surprise) to use the same approach for both functions. *)"
+      "S(S*O ONOoOtOeS:O OwOeO OaOrOeO S*OnOoOtS*O \
+       OsOhOoOrOtOcOuOtOtOiOnOgO OtOhOeO OlOiOsOtO ObOyO OuOsOiOnOgO \
+       S[OLOiOsOtS.OcOoOmOpOaOrOeS_OlOeOnOgOtOhOsS]O OfOiOrOsOtS;O \
+       OtOhOiOsO OmOaOyO ObOeO OsOlOoOwOeOrO OoOnO OlOoOnOgO \
+       OlOiOsOtOsO OiOmOmOeOdOiOaOtOeOlOyO OsOtOaOrOtO KwKiKtKhO \
+       OdOiOsOtOiOnOcOtO OeOlOeOmOeOnOtOsS.O OIOtO OiOsO OaOlOsOoO \
+       OiOnOcOoOrOrOeOcOtO KfKoKrO S[OcOoOmOpOaOrOeS]O ObOeOlOoOwS,O \
+       KaKnKdO OiOtO OiOsO ObOeOtOtOeOrO S(OpOrOiOnOcOiOpOlOeO KoKfO \
+       OlOeOaOsOtO OsOuOrOpOrOiOsOeS)O KtKoO OuOsOeO OtOhOeO OsOaOmOeO \
+       OaOpOpOrOoOaOcOhO KfKoKrO ObOoOtOhO OfOuOnOcOtOiOoOnOsS.O S*S)";
+    render_test "1-10 and random decimal numbers"
+      "1 2 3 4 5 6 7 8 9 10 0.2871517527973204 -0.7263030123420913 \
+       -0.019244505098450194 0.2501678809785825"
+      "N1O N2O N3O N4O N5O N6O N7O N8O N9O N1N0O \
+       N0N.N2N8N7N1N5N1N7N5N2N7N9N7N3N2N0N4O \
+       N-N0N.N7N2N6N3N0N3N0N1N2N3N4N2N0N9N1N3O \
+       N-N0N.N0N1N9N2N4N4N5N0N5N0N9N8N4N5N0N1N9N4O \
+       N0N.N2N5N0N1N6N7N8N8N0N9N7N8N5N8N2N5";
+    render_test "python float array"
+      "array([ 0.02520363,  0.64906852,  0.6793208 , -0.08730921,  \
+       0.58315264, 0.51711702, -0.3477684 ,  0.79009835, -0.06583067, \
+       -1.8714756 ])"
+      "OaOrOrOaOyS(S[O N0S.N0N2N5N2N0N3N6N3S,O O \
+       N0S.N6N4N9N0N6N8N5N2S,O O N0N.N6N7N9N3N2N0N8O S,O \
+       S-N0S.N0N8N7N3N0N9N2N1S,O O N0S.N5N8N3N1N5N2N6N4S,O \
+       N0S.N5N1N7N1N1N7N0N2S,O N-N0N.N3N4N7N7N6N8N4O S,O O \
+       N0S.N7N9N0N0N9N8N3N5S,O S-N0S.N0N6N5N8N3N0N6N7S,O \
+       N-N1N.N8N7N1N4N7N5N6O S]S)";
   ]
 
 let tests =
