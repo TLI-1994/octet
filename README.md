@@ -22,3 +22,5 @@ Currently available key bindings:
     C-x C-n             Execute command in the minibuffer
     C-x C-c             Quit
     C-p                 Set mark (to highlight text)
+    C-y                 Paste from the clipboard
+    C-n                 Format OCaml code
