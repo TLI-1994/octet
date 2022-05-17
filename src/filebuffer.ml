@@ -303,20 +303,21 @@ struct
     else if start_line <= line && line <= end_line then Some (0, width)
     else None
 
+  let update_bounds curr min amt =
+    if curr < !min then min := curr
+    else if curr > !min + amt then min := curr - amt
+    else ()
+
   let to_image
       (buffer : t)
       (top_line : int ref)
+      (left_pos : int ref)
       ((w, h) : int * int)
       (show_cursor : bool) =
     let visual_h = h - 1 in
     let visual_w = w - 5 in
-
-    if buffer.cursor_line < !top_line then
-      top_line := buffer.cursor_line
-    else if buffer.cursor_line > !top_line + visual_h then
-      top_line := buffer.cursor_line - visual_h
-    else ();
-
+    update_bounds buffer.cursor_line top_line visual_h;
+    update_bounds buffer.cursor_pos left_pos visual_w;
     let line_numbers = Orender.make_line_numbers !top_line visual_h in
     let bounds = compute_hl_bounds buffer in
     let editor_img =
@@ -328,6 +329,7 @@ struct
              Orender.image_of_string
                (get_hl_opt buffer visual_w bounds i)
                (get_cursor_opt buffer show_cursor i))
+      |> List.map (I.hcrop !left_pos 0)
       |> Orender.crop_to (visual_w, visual_h)
     in
     line_numbers <|> editor_img <-> modeline_to_image buffer visual_w

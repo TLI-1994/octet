@@ -30,6 +30,7 @@ module Make (FileBuffer : Obuffer.MUT_FILEBUFFER) = struct
         buffer : u;
         active : bool;
         top_line : int ref;
+        left_pos : int ref;
       }
     | Minibuffer of {
         buffer : u;
@@ -48,7 +49,8 @@ module Make (FileBuffer : Obuffer.MUT_FILEBUFFER) = struct
     Minibuffer { buffer = FileBuffer.empty (); active = false }
 
   let init (b : FileBuffer.t) =
-    Leaf { buffer = b; active = false; top_line = ref 0 }
+    Leaf
+      { buffer = b; active = false; top_line = ref 0; left_pos = ref 0 }
 
   let rec minibuffer_on = function
     | Hsplit (a, b) -> Hsplit (minibuffer_on a, minibuffer_on b)
@@ -179,8 +181,8 @@ module Make (FileBuffer : Obuffer.MUT_FILEBUFFER) = struct
         to_image ((fst dim - 1) / 2, snd dim) t1
         <|> I.char A.empty '|' 1 (snd dim)
         <|> to_image ((fst dim - 1) / 2, snd dim) t2
-    | Leaf { buffer; active; top_line } ->
-        FileBuffer.to_image buffer top_line dim active
+    | Leaf { buffer; active; top_line; left_pos } ->
+        FileBuffer.to_image buffer top_line left_pos dim active
     | Minibuffer { buffer; active } ->
-        FileBuffer.to_image buffer (ref 0) dim active
+        FileBuffer.to_image buffer (ref 0) (ref 0) dim active
 end
