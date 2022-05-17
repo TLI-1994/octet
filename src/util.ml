@@ -109,7 +109,7 @@ let rec string_list_of_string s =
     Examples:
 
     - [string_list_of_string \[\]] is "".
-    - [string_list_of_string \["t"; "e"; "s"; "t"\] is "test"]*)
+    - [string_list_of_string \["t"; "e"; "s"; "t"\]] is "test"*)
 let string_of_string_list = List.fold_left ( ^ ) ""
 
 (** [log s] writes the current time and the message [s] to the file
