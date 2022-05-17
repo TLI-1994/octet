@@ -165,7 +165,6 @@ let image_of_string hl_opt cursor_opt s =
   in
   imlist |> I.hcat
 
-(** [wrap_to w i] is the image [i], wrapped to have width [w]. *)
 let wrap_to width img =
   let rec go off =
     I.hcrop off 0 img

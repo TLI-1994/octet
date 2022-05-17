@@ -42,11 +42,10 @@ struct
         fb.cursor_pos <- fb.cursor_pos + 1;
         fb.cursor_pos_cache <- fb.cursor_pos;
         fb
-    | [] -> failwith "no front buffer?"
+    | [] -> failwith "no front buffer?" [@coverage off]
 
   let insert_newline fb =
     match fb.front with
-    | [] -> failwith "no front buffer?"
     | h :: t ->
         let s = LineBuffer.to_string h in
         let l =
@@ -59,10 +58,10 @@ struct
         fb.cursor_pos <- 0;
         fb.cursor_pos_cache <- 0;
         fb
+    | [] -> failwith "no front buffer?" [@coverage off]
 
   let mv_up fb =
     match fb.front with
-    | [] -> failwith "no front buffer?"
     | [ _ ] -> fb
     | h1 :: h2 :: t ->
         LineBuffer.move_to h2 fb.cursor_pos_cache;
@@ -72,6 +71,7 @@ struct
         fb.front <- h2 :: t;
         fb.back <- h1 :: fb.back;
         fb
+    | [] -> failwith "no front buffer?" [@coverage off]
 
   let mv_down fb =
     match fb.back with
@@ -87,28 +87,27 @@ struct
 
   let mv_left fb =
     match fb.front with
-    | [] -> failwith "no front buffer?"
     | h :: _ ->
         let pos = max 0 (fb.cursor_pos - 1) in
         LineBuffer.move_to h pos;
         fb.cursor_pos <- pos;
         fb.cursor_pos_cache <- pos;
         fb
+    | [] -> failwith "no front buffer?" [@coverage off]
 
   let mv_right fb =
     match fb.front with
-    | [] -> failwith "no front buffer?"
     | h :: _ ->
         let pos = min (LineBuffer.content_size h) (fb.cursor_pos + 1) in
         LineBuffer.move_to h pos;
         fb.cursor_pos <- pos;
         fb.cursor_pos_cache <- pos;
         fb
+    | [] -> failwith "no front buffer?" [@coverage off]
 
   let delete fb =
     begin
       match fb.front with
-      | [] -> failwith "no front buffer?"
       | h1 :: h2 :: t when fb.cursor_pos = 0 ->
           let prev_line = LineBuffer.to_string h2 in
           let new_line = prev_line ^ LineBuffer.to_string h1 in
@@ -124,6 +123,7 @@ struct
           LineBuffer.delete h;
           fb.cursor_pos <- max 0 (fb.cursor_pos - 1);
           fb.cursor_pos_cache <- max 0 (fb.cursor_pos_cache - 1)
+      | [] -> failwith "no front buffer?" [@coverage off]
     end;
     fb
 
@@ -140,7 +140,6 @@ struct
     |> List.map (fun s -> LineBuffer.make s 80)
     |> function
     | [] -> ans
-    (* | [ h ] -> { ans with front = [ h ] } *)
     | h :: t -> { ans with front = [ h ]; back = t; desc = file_name }
 
   let write_to_file buffer =
@@ -192,10 +191,10 @@ struct
      I.width img - off > width then go (off + width) else []) in go 0 |>
      I.vcat |> I.hsnap ~align:`Left width *)
 
-  let cursor_icon = "⚛"
+  (* let cursor_icon = "⚛" *)
 
-  let cursor_image width =
-    I.void width 1 <|> I.string A.(bg red ++ st blink) cursor_icon
+  (* let cursor_image width = I.void width 1 <|> I.string A.(bg red ++
+     st blink) cursor_icon *)
 
   let toggle_mark (buffer : t) =
     {
@@ -218,90 +217,57 @@ struct
       ^ string_of_int buffer.mark_pos)
     </> I.char A.(fg black ++ bg white) ' ' width 1
 
-  let add_cursor (line : image) (cursor_pos : int) =
-    cursor_image cursor_pos </> line
+  (* let add_cursor (line : image) (cursor_pos : int) = cursor_image
+     cursor_pos </> line *)
 
-  let render_unselected (line : string) (active : bool) : image =
-    I.string
-      (if active then A.(fg lightwhite ++ bg lightblack) else A.empty)
-      line
+  (* let render_unselected (line : string) (active : bool) : image =
+     I.string (if active then A.(fg lightwhite ++ bg lightblack) else
+     A.empty) line *)
 
-  let render_selected (line : string) : image =
-    I.string A.(bg lightblue) line
+  (* let render_selected (line : string) : image = I.string A.(bg
+     lightblue) line *)
 
-  let render_beginning_selected
-      (line : string)
-      (pos : int)
-      (active : bool) : image =
-    let parts = Util.split_at_n line pos in
-    render_selected (List.nth parts 0)
-    <|> render_unselected (List.nth parts 1) active
+  (* let render_beginning_selected (line : string) (pos : int) (active :
+     bool) : image = let parts = Util.split_at_n line pos in
+     render_selected (List.nth parts 0) <|> render_unselected (List.nth
+     parts 1) active *)
 
-  let render_end_selected (line : string) (pos : int) (active : bool) :
-      image =
-    let parts = Util.split_at_n line pos in
-    render_unselected (List.nth parts 0) active
-    <|> render_selected (List.nth parts 1)
+  (* let render_end_selected (line : string) (pos : int) (active : bool)
+     : image = let parts = Util.split_at_n line pos in render_unselected
+     (List.nth parts 0) active <|> render_selected (List.nth parts 1) *)
 
-  let render_selected_in_line
-      (line : string)
-      (s : int)
-      (e : int)
-      (active : bool) : image =
-    let parts = Util.split_at_n line e in
-    render_end_selected (List.nth parts 0) s active
-    <|> render_unselected (List.nth parts 1) active
+  (* let render_selected_in_line (line : string) (s : int) (e : int)
+     (active : bool) : image = let parts = Util.split_at_n line e in
+     render_end_selected (List.nth parts 0) s active <|>
+     render_unselected (List.nth parts 1) active *)
 
-  let render_line_without_cursor
-      (buffer : t)
-      (absolute_line : int)
-      (line : string)
-      (active : bool) =
-    if buffer.mark_active then
-      let min_select = min buffer.cursor_line buffer.mark_line in
-      let max_select = max buffer.cursor_line buffer.mark_line in
-      let min_select_pos = min buffer.cursor_pos buffer.mark_pos in
-      let max_select_pos = max buffer.cursor_pos buffer.mark_pos in
-      let start_pos =
-        if buffer.cursor_line < buffer.mark_line then buffer.cursor_pos
-        else buffer.mark_pos
-      in
-      let end_pos =
-        if buffer.cursor_line > buffer.mark_line then buffer.cursor_pos
-        else buffer.mark_pos
-      in
-      if min_select = max_select && absolute_line = min_select then
-        (* one line *)
-        render_selected_in_line line min_select_pos max_select_pos
-          active
-      else if absolute_line < min_select then
-        render_unselected line active
-      else if absolute_line > max_select then
-        render_unselected line active
-      else if absolute_line = min_select then
-        render_end_selected line start_pos active
-      else if absolute_line = max_select then
-        render_beginning_selected line end_pos active
-      else render_selected line
-    else render_unselected line active
+  (* let render_line_without_cursor (buffer : t) (absolute_line : int)
+     (line : string) (active : bool) = if buffer.mark_active then let
+     min_select = min buffer.cursor_line buffer.mark_line in let
+     max_select = max buffer.cursor_line buffer.mark_line in let
+     min_select_pos = min buffer.cursor_pos buffer.mark_pos in let
+     max_select_pos = max buffer.cursor_pos buffer.mark_pos in let
+     start_pos = if buffer.cursor_line < buffer.mark_line then
+     buffer.cursor_pos else buffer.mark_pos in let end_pos = if
+     buffer.cursor_line > buffer.mark_line then buffer.cursor_pos else
+     buffer.mark_pos in if min_select = max_select && absolute_line =
+     min_select then (* one line *) render_selected_in_line line
+     min_select_pos max_select_pos active else if absolute_line <
+     min_select then render_unselected line active else if absolute_line
+     > max_select then render_unselected line active else if
+     absolute_line = min_select then render_end_selected line start_pos
+     active else if absolute_line = max_select then
+     render_beginning_selected line end_pos active else render_selected
+     line else render_unselected line active *)
 
-  let render_line
-      (buffer : t)
-      (top_line : int)
-      (show_cursor : bool)
-      (i : int)
-      (elt : string) =
-    let absolute_location = i + top_line in
-    if absolute_location = buffer.cursor_line && show_cursor then
-      add_cursor
-        (render_line_without_cursor buffer absolute_location elt
-           show_cursor)
-        buffer.cursor_pos
-    else
-      render_line_without_cursor buffer absolute_location elt
-        show_cursor
+  (* let render_line (buffer : t) (top_line : int) (show_cursor : bool)
+     (i : int) (elt : string) = let absolute_location = i + top_line in
+     if absolute_location = buffer.cursor_line && show_cursor then
+     add_cursor (render_line_without_cursor buffer absolute_location elt
+     show_cursor) buffer.cursor_pos else render_line_without_cursor
+     buffer absolute_location elt show_cursor *)
 
-  let _ = render_line
+  (* let _ = render_line *)
 
   let get_cursor_opt buffer show_cursor line_num =
     if not show_cursor then None
@@ -321,7 +287,7 @@ struct
           min buf.mark_pos buf.cursor_pos,
           buf.mark_line,
           max buf.mark_pos buf.cursor_pos )
-    | _ -> failwith "RI violated"
+    | _ -> failwith "RI violated" [@coverage off]
 
   let get_hl_opt
       buffer

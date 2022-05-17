@@ -19,9 +19,11 @@ let check_ri buf =
   && buf.l_pos <= Bytes.length buf.contents_L
   && 0 <= buf.r_pos
   && buf.r_pos <= Bytes.length buf.contents_R
+  [@@coverage off]
 
 let rep_ok buf =
   if (not debug) || check_ri buf then buf else failwith "RI violated!"
+  [@@coverage off]
 
 let make (str : string) (l : int) =
   let buffer_L =

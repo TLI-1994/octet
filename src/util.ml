@@ -91,3 +91,9 @@ let pad_to ((width, height) : int * int) contents =
   List.map
     (fun s -> s ^ String.make (width - (String.length s mod width)) ' ')
     row_padded
+
+(** [pam x \[f1; f2; ...; fn\]] applies functions [f1, f2, ..., fn] [x]
+    and builds the list [f1 x; f2 x; ...; fn x].
+
+    named so because it's like [map] but it's backwards. *)
+let pam x = List.map (fun f -> f x)
