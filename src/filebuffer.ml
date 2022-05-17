@@ -137,8 +137,7 @@ struct
           at_begin fb |> not && on_space fb ~offset:~-1 |> not)
 
   and at_end fb =
-    fb.cursor_pos
-    = (List.hd fb.front |> LineBuffer.to_string |> String.length)
+    fb.cursor_pos = (List.hd fb.front |> LineBuffer.content_size)
 
   and at_begin fb = fb.cursor_pos = 0
 
@@ -148,8 +147,22 @@ struct
       (fb.cursor_pos + os)
     = ' '
 
-  let forward_word fb = forward_aux mv_right fb
-  let backward_word fb = backward_aux mv_left fb
+  let forward_word = forward_aux mv_right
+  let backward_word = backward_aux mv_left
+
+  let mv_to_end fb =
+    let h = List.hd fb.front in
+    let line_len = h |> LineBuffer.content_size in
+    while fb.cursor_pos <> line_len do
+      mv_right fb |> ignore
+    done;
+    fb
+
+  let mv_to_begin fb =
+    while fb.cursor_pos <> 0 do
+      mv_left fb |> ignore
+    done;
+    fb
 
   let rec delete fb =
     begin
@@ -317,6 +330,8 @@ struct
     | `ASCII 'P', [ `Ctrl ] -> toggle_mark buffer
     | `ASCII 'F', [ `Ctrl ] -> forward_word buffer
     | `ASCII 'B', [ `Ctrl ] -> backward_word buffer
+    | `ASCII 'E', [ `Ctrl ] -> mv_to_end buffer
+    | `ASCII 'A', [ `Ctrl ] -> mv_to_begin buffer
     | `Backspace, [ `Meta ] -> backward_kill buffer
     | `ASCII 'd', [ `Meta ] -> forward_kill buffer
     | `ASCII ch, _ -> insert_char buffer ch

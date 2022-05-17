@@ -377,7 +377,7 @@ struct
     let forward_kill_key = (`ASCII 'd', [ `Meta ]) in
     insert_chars fb chars_to_insert;
     [
-      contents_test "initial contents is \"cs 3110\""
+      contents_test "initial contents is \"cs 3110 octet\""
         [ "cs 3110 octet" ] fb;
       fancy_mv_test "backward word when char before cursor is not space"
         backward_word_key ' ' [ "cs 3110  octet" ] fb;
