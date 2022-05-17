@@ -371,42 +371,44 @@ struct
           Filebuffer.update_on_key fb (`ASCII h, []) |> ignore;
           insert_chars fb t
     in
+    insert_chars fb chars_to_insert;
     let backward_word_key = (`ASCII 'B', [ `Ctrl ]) in
     let forward_word_key = (`ASCII 'F', [ `Ctrl ]) in
     let backward_kill_key = (`Backspace, [ `Meta ]) in
     let forward_kill_key = (`ASCII 'd', [ `Meta ]) in
-    insert_chars fb chars_to_insert;
-    [
-      contents_test "initial contents is \"cs 3110 octet\""
-        [ "cs 3110 octet" ] fb;
-      fancy_mv_test "backward word when char before cursor is not space"
-        backward_word_key ' ' [ "cs 3110  octet" ] fb;
-      fancy_mv_test "backward word when char before cursor is space"
-        backward_word_key 'c' [ "cs c3110  octet" ] fb;
-      fancy_mv_test "forward word when char after cursor is not space"
-        forward_word_key 's' [ "cs c3110s  octet" ] fb;
-      fancy_mv_test "forward word when char after cursor is space"
-        forward_word_key '9' [ "cs c3110s  octet9" ] fb;
-      fancy_mv_test
-        "forward kill does nothing when cursor is at the end"
-        forward_kill_key ' '
-        [ "cs c3110s  octet9 " ]
-        fb;
-      fancy_mv_test "backward kill when char before cursor is space"
-        backward_kill_key 'b' [ "cs c3110s  b" ] fb;
-      fancy_mv_test "backward kill when char before cursor is not space"
-        backward_kill_key 'B' [ "cs c3110s  B" ] fb;
-      fancy_mv_test "backward word to set up" backward_word_key 'W'
-        [ "cs c3110s  WB" ] fb;
-      fancy_mv_test "forward kill when char after cursor is not space"
-        forward_kill_key ' ' [ "cs c3110s  W " ] fb;
-      fancy_mv_test "backward word to set up" backward_word_key 'V'
-        [ "cs c3110s  VW " ] fb;
-      fancy_mv_test "forward word to set up" forward_word_key 'U'
-        [ "cs c3110s  VWU " ] fb;
-      fancy_mv_test "forward kill when char after cursor is space"
-        forward_kill_key 'E' [ "cs c3110s  VWUE" ] fb;
-    ]
+    Util.pam fb
+      [
+        contents_test "initial contents is \"cs 3110 octet\""
+          [ "cs 3110 octet" ];
+        fancy_mv_test
+          "backward word when char before cursor is not space"
+          backward_word_key ' ' [ "cs 3110  octet" ];
+        fancy_mv_test "backward word when char before cursor is space"
+          backward_word_key 'c' [ "cs c3110  octet" ];
+        fancy_mv_test "forward word when char after cursor is not space"
+          forward_word_key 's' [ "cs c3110s  octet" ];
+        fancy_mv_test "forward word when char after cursor is space"
+          forward_word_key '9' [ "cs c3110s  octet9" ];
+        fancy_mv_test
+          "forward kill does nothing when cursor is at the end"
+          forward_kill_key ' '
+          [ "cs c3110s  octet9 " ];
+        fancy_mv_test "backward kill when char before cursor is space"
+          backward_kill_key 'b' [ "cs c3110s  b" ];
+        fancy_mv_test
+          "backward kill when char before cursor is not space"
+          backward_kill_key 'B' [ "cs c3110s  B" ];
+        fancy_mv_test "backward word to set up" backward_word_key 'W'
+          [ "cs c3110s  WB" ];
+        fancy_mv_test "forward kill when char after cursor is not space"
+          forward_kill_key ' ' [ "cs c3110s  W " ];
+        fancy_mv_test "backward word to set up" backward_word_key 'V'
+          [ "cs c3110s  VW " ];
+        fancy_mv_test "forward word to set up" forward_word_key 'U'
+          [ "cs c3110s  VWU " ];
+        fancy_mv_test "forward kill when char after cursor is space"
+          forward_kill_key 'E' [ "cs c3110s  VWUE" ];
+      ]
 
   let sequence_tests =
     Util.pam (Filebuffer.empty ())
