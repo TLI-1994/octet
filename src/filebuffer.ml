@@ -105,6 +105,59 @@ struct
         fb.cursor_pos_cache <- pos;
         fb
 
+  let rec mv_current_line_while
+      (mv : t -> t)
+      (s : string)
+      (fb : t)
+      (f : string -> t -> bool) =
+    if not (f s fb) then fb
+    else begin
+      mv fb |> ignore;
+      mv_current_line_while mv s fb f
+    end
+
+  let rec forward_word fb =
+    match fb.front with
+    | [] -> failwith "no front buffer?"
+    | h :: _ ->
+        let s = LineBuffer.to_string h in
+        forward_word_aux s fb
+
+  and forward_word_aux (s : string) (fb : t) =
+    if fb.cursor_pos = String.length s then fb
+    else
+      let not_at_end fb = fb.cursor_pos <> String.length s in
+      if String.get s fb.cursor_pos = ' ' then begin
+        mv_current_line_while mv_right s fb (fun s fb ->
+            not_at_end fb && String.get s fb.cursor_pos = ' ')
+        |> ignore;
+        forward_word_aux s fb
+      end
+      else
+        mv_current_line_while mv_right s fb (fun s fb ->
+            not_at_end fb && String.get s fb.cursor_pos <> ' ')
+
+  let rec backward_word fb =
+    match fb.front with
+    | [] -> failwith "no front buffer?"
+    | h :: _ ->
+        let s = LineBuffer.to_string h in
+        backward_word_aux s fb
+
+  and backward_word_aux (s : string) (fb : t) =
+    if fb.cursor_pos = 0 then fb
+    else
+      let not_at_begin fb = fb.cursor_pos <> 0 in
+      if String.get s (fb.cursor_pos - 1) = ' ' then begin
+        mv_current_line_while mv_left s fb (fun s fb ->
+            not_at_begin fb && String.get s (fb.cursor_pos - 1) = ' ')
+        |> ignore;
+        backward_word_aux s fb
+      end
+      else
+        mv_current_line_while mv_left s fb (fun s fb ->
+            not_at_begin fb && String.get s (fb.cursor_pos - 1) <> ' ')
+
   let delete fb =
     begin
       match fb.front with
@@ -417,8 +470,8 @@ struct
     match key with
     | `Enter, _ -> insert_newline buffer
     | `ASCII 'P', [ `Ctrl ] -> toggle_mark buffer
-    (* | `ASCII 'F', [ `Ctrl ] -> forward_word buffer | `ASCII 'B', [
-       `Ctrl ] -> backward_word buffer *)
+    | `ASCII 'F', [ `Ctrl ] -> forward_word buffer
+    | `ASCII 'B', [ `Ctrl ] -> backward_word buffer
     | `ASCII ch, _ -> insert_char buffer ch
     | `Backspace, _ | `Delete, _ -> delete buffer
     | `Arrow direxn, _ -> mv_cursor buffer direxn
