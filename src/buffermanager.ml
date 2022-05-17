@@ -21,6 +21,8 @@ module type BUFFER_MANAGER = sig
 end
 
 module Make (FileBuffer : Obuffer.MUT_FILEBUFFER) = struct
+  type u = FileBuffer.t
+
   type t =
     | Hsplit of t * t
     | Vsplit of t * t
@@ -32,8 +34,6 @@ module Make (FileBuffer : Obuffer.MUT_FILEBUFFER) = struct
         buffer : u;
         active : bool;
       }
-
-  and u = FileBuffer.t
 
   let rec write_all = function
     | Hsplit (t1, t2) | Vsplit (t1, t2) ->

@@ -1,7 +1,12 @@
 {
   "cursor": {
+<<<<<<< HEAD
+    "background": "yellow",
+    "keyword": "black",
+=======
     "background": "red",
     "keyword": "yellow",
+>>>>>>> main
     "symbol": "red",
     "number": "green",
     "other": "white"

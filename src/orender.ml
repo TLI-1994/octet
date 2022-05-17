@@ -180,3 +180,22 @@ let image_of_string hl_opt cursor_opt s =
                label_to_image_hl_cursor (i >= st && i <= en) (i == loc))
   in
   imlist |> I.hcat
+
+let make_line_numbers h =
+  Util.from 0 (h - 1)
+  |> List.map (fun d ->
+         I.string A.(bg black ++ st italic) (Printf.sprintf "% 3d " d))
+  |> I.vcat
+
+let crop_to ((width, height) : int * int) img_lst =
+  let open Notty in
+  let widthcropped =
+    I.vcat
+      (List.map
+         (fun img -> I.hcrop 0 (I.width img - width) img)
+         img_lst)
+  in
+  let heightcropped =
+    I.vcrop 0 (I.height widthcropped - height) widthcropped
+  in
+  heightcropped

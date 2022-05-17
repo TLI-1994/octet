@@ -35,6 +35,10 @@ bisect-clean:
 view-test view-bisect:
 	open -na "Brave Browser Beta" --args --incognito $(PWD)/_coverage/index.html
 
+view-doc view-docs:
+	open -na "Brave Browser Beta" --args --incognito \
+		$(PWD)/_build/default/_doc/_html/index.html
+
 zip:
 	rm -f octet.zip
 	zip -r octet.zip . -x@exclude.lst

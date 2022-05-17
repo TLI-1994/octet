@@ -2,10 +2,10 @@ type t = {
   mutable contents : string;
   mutable index : int;
 }
-(** AF: A string [s1 ^ s2] with the cursor between [s1] and [s2] is
-    represented if [s1] equals the string formed by the first [l_pos]
-    characters of [contents_L], and [s2] equals the string formed by the
-    characters after the first [r_pos] characters of [contents_R]. *)
+(** AF: the contents of the string are stored in [contents], and the
+    number of characters before the cursor is [index].
+
+    RI: [index <= String.length contents] *)
 
 let make (str : string) (_ : int) =
   { contents = str; index = String.length str }
