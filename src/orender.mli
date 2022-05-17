@@ -19,4 +19,5 @@ val crop_to : int * int -> Notty.image list -> Notty.image
 
 val char_tags_of_string_debug : string -> string
 (** [char_tags_of_string_debug s] prepends each character in [s] with
-    what tag of [Keyword | Symbol | Number | Other] it belongs to *)
+    the first character of what tag of
+    [Keyword | Symbol | Number | Other] it belongs to *)
