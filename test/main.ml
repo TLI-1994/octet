@@ -376,6 +376,8 @@ struct
     let forward_word_key = (`ASCII 'F', [ `Ctrl ]) in
     let backward_kill_key = (`Backspace, [ `Meta ]) in
     let forward_kill_key = (`ASCII 'd', [ `Meta ]) in
+    let mv_to_end = (`ASCII 'E', [ `Ctrl ]) in
+    let mv_to_begin = (`ASCII 'A', [ `Ctrl ]) in
     Util.pam fb
       [
         contents_test "initial contents is \"cs 3110 octet\""
@@ -408,6 +410,10 @@ struct
           [ "cs c3110s  VWU " ];
         fancy_mv_test "forward kill when char after cursor is space"
           forward_kill_key 'E' [ "cs c3110s  VWUE" ];
+        fancy_mv_test "move to beginning" mv_to_begin 'a'
+          [ "acs c3110s  VWUE" ];
+        fancy_mv_test "move to end" mv_to_end 'e'
+          [ "acs c3110s  VWUEe" ];
       ]
 
   let sequence_tests =
