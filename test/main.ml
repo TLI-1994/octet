@@ -280,6 +280,9 @@ module type FILE_BUFFER_TEST_ENV = sig
       with label [name] to move in the direction [dir] [n] times, and
       then insert [c] and check that the [buffer_contents fb] matches
       [expected]. *)
+
+  val fancy_mv_test :
+    string -> Notty.Unescape.key -> char -> string list -> t -> test
 end
 
 module TestEnv_of_FileBuffer (Filebuffer : Obuffer.MUT_FILEBUFFER) :
@@ -325,6 +328,14 @@ module TestEnv_of_FileBuffer (Filebuffer : Obuffer.MUT_FILEBUFFER) :
        Filebuffer.update_on_key fb (`ASCII c, []) |> ignore;
        Filebuffer.buffer_contents fb)
       ~printer:(Util.string_of_list String.escaped)
+
+  let fancy_mv_test name key c expected fb =
+    name >:: fun _ ->
+    assert_equal expected
+      (Filebuffer.update_on_key fb key |> ignore;
+       Filebuffer.update_on_key fb (`ASCII c, []) |> ignore;
+       Filebuffer.buffer_contents fb)
+      ~printer:(Util.string_of_list String.escaped)
 end
 
 module FilebufferTests (Filebuffer : Obuffer.MUT_FILEBUFFER) : Tests =
@@ -345,6 +356,57 @@ struct
           `Down 'n' 5
           [ ""; "hello world! it is a nice day"; "n" ];
       ]
+
+  let fancy_mv_tests =
+    let fb = Filebuffer.empty () in
+    let chars_to_insert =
+      [
+        'c'; 's'; ' '; '3'; '1'; '1'; '0'; ' '; 'o'; 'c'; 't'; 'e'; 't';
+      ]
+    in
+    let rec insert_chars fb lst =
+      match lst with
+      | [] -> ()
+      | h :: t ->
+          Filebuffer.update_on_key fb (`ASCII h, []) |> ignore;
+          insert_chars fb t
+    in
+    let backward_word_key = (`ASCII 'B', [ `Ctrl ]) in
+    let forward_word_key = (`ASCII 'F', [ `Ctrl ]) in
+    let backward_kill_key = (`Backspace, [ `Meta ]) in
+    let forward_kill_key = (`ASCII 'd', [ `Meta ]) in
+    insert_chars fb chars_to_insert;
+    [
+      contents_test "initial contents is \"cs 3110\""
+        [ "cs 3110 octet" ] fb;
+      fancy_mv_test "backward word when char before cursor is not space"
+        backward_word_key ' ' [ "cs 3110  octet" ] fb;
+      fancy_mv_test "backward word when char before cursor is space"
+        backward_word_key 'c' [ "cs c3110  octet" ] fb;
+      fancy_mv_test "forward word when char after cursor is not space"
+        forward_word_key 's' [ "cs c3110s  octet" ] fb;
+      fancy_mv_test "forward word when char after cursor is space"
+        forward_word_key '9' [ "cs c3110s  octet9" ] fb;
+      fancy_mv_test
+        "forward kill does nothing when cursor is at the end"
+        forward_kill_key ' '
+        [ "cs c3110s  octet9 " ]
+        fb;
+      fancy_mv_test "backward kill when char before cursor is space"
+        backward_kill_key 'b' [ "cs c3110s  b" ] fb;
+      fancy_mv_test "backward kill when char before cursor is not space"
+        backward_kill_key 'B' [ "cs c3110s  B" ] fb;
+      fancy_mv_test "backward word to set up" backward_word_key 'W'
+        [ "cs c3110s  WB" ] fb;
+      fancy_mv_test "forward kill when char after cursor is not space"
+        forward_kill_key ' ' [ "cs c3110s  W " ] fb;
+      fancy_mv_test "backward word to set up" backward_word_key 'V'
+        [ "cs c3110s  VW " ] fb;
+      fancy_mv_test "forward word to set up" forward_word_key 'U'
+        [ "cs c3110s  VWU " ] fb;
+      fancy_mv_test "forward kill when char after cursor is space"
+        forward_kill_key 'E' [ "cs c3110s  VWUE" ] fb;
+    ]
 
   let sequence_tests =
     Util.pam (Filebuffer.empty ())
@@ -415,7 +477,7 @@ struct
           [ "abli"; ""; "jcf"; "otdpker"; "snmghq" ];
       ]
 
-  let tests = read_tests @ sequence_tests
+  let tests = read_tests @ fancy_mv_tests @ sequence_tests
 end
 
 let buffer_tests =
