@@ -17,7 +17,10 @@ module type MUT_FILEBUFFER = sig
   val empty : unit -> t
   val from_file : string -> t
   val write_to_file : t -> unit
-  val to_image : t -> int -> int * int -> bool -> Notty.I.t
+
+  val to_image :
+    t -> int ref -> int ref -> int * int -> bool -> Notty.I.t
+
   val buffer_contents : t -> string list
   val ocaml_format : t -> t
   val update_on_key : t -> Notty.Unescape.key -> t

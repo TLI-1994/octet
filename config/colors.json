@@ -1,18 +1,13 @@
 {
   "cursor": {
-<<<<<<< HEAD
-    "background": "yellow",
-    "keyword": "black",
-=======
-    "background": "red",
+    "background": "white",
     "keyword": "yellow",
->>>>>>> main
     "symbol": "red",
     "number": "green",
     "other": "white"
   },
   "highlight": {
-    "background": "blue",
+    "background": "red",
     "keyword": "yellow",
     "symbol": "red",
     "number": "green",

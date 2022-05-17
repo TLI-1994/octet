@@ -111,3 +111,11 @@ let rec string_list_of_string s =
     - [string_list_of_string \[\]] is "".
     - [string_list_of_string \["t"; "e"; "s"; "t"\] is "test"]*)
 let string_of_string_list = List.fold_left ( ^ ) ""
+
+(** [log s] writes the current time and the message [s] to the file
+    ["./log"]. Will create a new log file if it does not exist.*)
+let log s =
+  let oc = open_out_gen [ Open_creat; Open_append ] 0o666 "log" in
+  Printf.fprintf oc "Time: %f\n" (Unix.gettimeofday ());
+  Printf.fprintf oc "Message: %s\n\n" s;
+  close_out oc
