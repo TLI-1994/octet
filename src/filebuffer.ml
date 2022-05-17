@@ -305,18 +305,26 @@ struct
 
   let to_image
       (buffer : t)
-      (top_line : int)
+      (top_line : int ref)
       ((w, h) : int * int)
       (show_cursor : bool) =
     let visual_h = h - 1 in
     let visual_w = w - 5 in
-    let line_numbers = Orender.make_line_numbers visual_h in
+
+    if buffer.cursor_line < !top_line then
+      top_line := buffer.cursor_line
+    else if buffer.cursor_line > !top_line + visual_h then
+      top_line := buffer.cursor_line - visual_h
+    else ();
+
+    let line_numbers = Orender.make_line_numbers !top_line visual_h in
     let bounds = compute_hl_bounds buffer in
     let editor_img =
       buffer_contents buffer
       |> Util.pad_to (visual_w, visual_h)
-      |> Util.list_from_nth top_line
+      |> Util.list_from_nth !top_line
       |> List.mapi (fun i ->
+             let i = i + !top_line in
              Orender.image_of_string
                (get_hl_opt buffer visual_w bounds i)
                (get_cursor_opt buffer show_cursor i))

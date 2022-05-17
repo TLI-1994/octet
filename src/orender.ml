@@ -169,8 +169,8 @@ let image_of_string hl_opt cursor_opt s =
   in
   imlist |> I.hcat
 
-let make_line_numbers h =
-  Util.from 0 (h - 1)
+let make_line_numbers s h =
+  Util.from s (s + h - 1)
   |> List.map (fun d ->
          I.string A.(bg black ++ st italic) (Printf.sprintf "% 3d " d))
   |> I.vcat

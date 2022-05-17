@@ -23,7 +23,7 @@ module type MUT_FILEBUFFER = sig
   val empty : unit -> t
   val from_file : string -> t
   val write_to_file : t -> unit
-  val to_image : t -> int -> int * int -> bool -> Notty.I.t
+  val to_image : t -> int ref -> int * int -> bool -> Notty.I.t
 
   (* val to_string : t -> string *)
   val buffer_contents : t -> string list

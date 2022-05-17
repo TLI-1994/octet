@@ -46,7 +46,7 @@ module type MUT_FILEBUFFER = sig
   (** [write_to_file buffer] writes the contents of the buffer to the
       file in its name. *)
 
-  val to_image : t -> int -> int * int -> bool -> Notty.I.t
+  val to_image : t -> int ref -> int * int -> bool -> Notty.I.t
   (** [to_image buffer top_line (h, w) show_cursor] is the image of
       [buffer] starting from [top_line], wrapped by width [w], cropped
       to height of [h] with cursor if [show_cursor] and without cursor
