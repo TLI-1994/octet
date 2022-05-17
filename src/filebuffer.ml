@@ -305,8 +305,8 @@ struct
 
   let update_bounds curr min amt =
     if curr < !min then min := curr
-    else if curr > !min + amt then min := curr - amt
-    else ()
+    else if !min + amt > curr then ()
+    else min := curr - amt + 1
 
   let to_image
       (buffer : t)
@@ -318,6 +318,11 @@ struct
     let visual_w = w - 5 in
     update_bounds buffer.cursor_line top_line visual_h;
     update_bounds buffer.cursor_pos left_pos visual_w;
+    Util.log
+      (Printf.sprintf
+         "to_image log: tl: %d lp: %d vh: %d vw: %d cl: %d cp: %d"
+         !top_line !left_pos visual_h visual_w buffer.cursor_line
+         buffer.cursor_pos);
     let line_numbers = Orender.make_line_numbers !top_line visual_h in
     let bounds = compute_hl_bounds buffer in
     let editor_img =
