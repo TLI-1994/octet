@@ -164,6 +164,24 @@ struct
     done;
     fb
 
+  let mv_search fb short =
+    let found = ref false in
+    List.iteri
+      (fun i line_buf ->
+        if !found = true then ()
+        else
+          let large = LineBuffer.to_string line_buf in
+          let res = Util.search large short in
+          match res with
+          | [] -> ()
+          | h :: _ ->
+              found := true;
+              Util.iter_rev_from (fun _ -> ignore (mv_down fb)) 0 i;
+              ignore (mv_to_begin fb);
+              Util.iter_rev_from (fun _ -> ignore (mv_right fb)) 1 h)
+      fb.back;
+    fb
+
   let rec delete fb =
     begin
       match fb.front with
@@ -318,11 +336,6 @@ struct
     let visual_w = w - 5 in
     update_bounds buffer.cursor_line top_line visual_h;
     update_bounds buffer.cursor_pos left_pos visual_w;
-    Util.log
-      (Printf.sprintf
-         "to_image log: tl: %d lp: %d vh: %d vw: %d cl: %d cp: %d"
-         !top_line !left_pos visual_h visual_w buffer.cursor_line
-         buffer.cursor_pos);
     let line_numbers = Orender.make_line_numbers !top_line visual_h in
     let bounds = compute_hl_bounds buffer in
     let editor_img =
@@ -347,6 +360,7 @@ struct
     | `ASCII 'B', [ `Ctrl ] -> backward_word buffer
     | `ASCII 'E', [ `Ctrl ] -> mv_to_end buffer
     | `ASCII 'A', [ `Ctrl ] -> mv_to_begin buffer
+    | `ASCII 'S', [ `Ctrl ] -> mv_search buffer "abc"
     | `Backspace, [ `Meta ] -> backward_kill buffer
     | `ASCII 'd', [ `Meta ] -> forward_kill buffer
     | `ASCII ch, _ -> insert_char buffer ch

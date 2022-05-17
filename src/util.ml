@@ -119,3 +119,23 @@ let log s =
   Printf.fprintf oc "Time: %f\n" (Unix.gettimeofday ());
   Printf.fprintf oc "Message: %s\n\n" s;
   close_out oc
+
+(** [iter_from f i j] behaves the same as
+    [(from i j) |> List.rev |> List.iter f] *)
+let rec iter_rev_from f i j =
+  if i > j then ()
+  else begin
+    f j;
+    iter_rev_from f i (j - 1)
+  end
+
+(** [search short long] is a list of indices in [long] such that the
+    next [String.length short] characters match those of [short] *)
+let search long short =
+  let small = String.length short in
+  let large = String.length long in
+  let ans = ref [] in
+  iter_rev_from
+    (fun i -> if String.sub long i small = short then ans := i :: !ans)
+    0 (large - small);
+  !ans
