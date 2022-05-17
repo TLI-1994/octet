@@ -82,3 +82,32 @@ let pad_to ((width, height) : int * int) contents =
 
     named so because it's like [map] but it's backwards. *)
 let pam x = List.map (fun f -> f x)
+
+(** [string_of_char c] returns a string consisting of only the character
+    [c]*)
+let string_of_char = String.make 1
+
+(** [string_list_of_string s] returns a list consisting of strings of
+    each character of [s] in order
+
+    Examples:
+
+    - [string_list_of_string ""] is \[\].
+    - [string_list_of_string "test" is \["t"; "e"; "s"; "t"\]]*)
+let rec string_list_of_string s =
+  match s with
+  | "" -> []
+  | s ->
+      String.get s 0 |> string_of_char |> fun x ->
+      x
+      :: (string_list_of_string @@ String.sub s 1
+         @@ (String.length s - 1))
+
+(** [string_of_string_list l] returns a string with all the elements of
+    [l] concatenated
+
+    Examples:
+
+    - [string_list_of_string \[\]] is "".
+    - [string_list_of_string \["t"; "e"; "s"; "t"\] is "test"]*)
+let string_of_string_list = List.fold_left ( ^ ) ""
