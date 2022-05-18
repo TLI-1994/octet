@@ -53,13 +53,8 @@ module type MUT_FILEBUFFER = sig
       to height of [h] with cursor if [show_cursor] and without cursor
       if not [show_cursor]. *)
 
-  (* TODO: simplify this function (?). *)
-
-  (* val to_string : t -> string *)
   val buffer_contents : t -> string list
   (** [buffer_contents buffer] is the contents of [buffer]. *)
-  (* TODO: remove this function when the implementation of to_image is
-     complete.*)
 
   val ocaml_format : t -> t
   (** [ocaml_format buffer] is the buffer with the ocaml format applied. *)
@@ -69,4 +64,6 @@ module type MUT_FILEBUFFER = sig
       signal sent by [key]. *)
 
   val paste_from_clipboard : t -> t
+  (** [paste_from_clipboard buffer] is [buffer] with the contents from
+      the system clipboard pasted to the cursor position. *)
 end

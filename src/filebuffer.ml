@@ -176,9 +176,9 @@ struct
           | [] -> ()
           | h :: _ ->
               found := true;
-              Util.iter_rev_from (fun _ -> ignore (mv_down fb)) 0 i;
-              ignore (mv_to_begin fb);
-              Util.iter_rev_from (fun _ -> ignore (mv_right fb)) 1 h)
+              Util.iter_rev_from (fun _ -> mv_down fb |> ignore) 0 i;
+              mv_to_begin fb |> ignore;
+              Util.iter_rev_from (fun _ -> mv_right fb |> ignore) 1 h)
       fb.back;
     fb
 
