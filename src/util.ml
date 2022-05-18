@@ -140,7 +140,8 @@ let search range target =
   !ans
 
 (** from 2018 final exam: [interleave s1 s2] interleaves the two
-    sequences [s1] and [s2].
+    sequences [s1] and [s2], with any extra elements from the longer
+    sequence at the end of the result.
 
     Examples (elements of sequence are in angle brackets):
 
