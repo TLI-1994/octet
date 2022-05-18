@@ -520,13 +520,17 @@ let buffer_tests =
 
 (** [render_test name input expected] creates an OUnit test case which
     computes the tags of the characters in [char_tags_of_string input]
-    and checks that they match [expected]. The format for [expected] is
-    the characters of [input], each preceded by the first letter of the
-    category they belong to: [Keyword | Symbol | Number | Other]. *)
+    and checks that they match [expected]. *)
 let render_test name input expected =
+  let expected_verbose =
+    let s_tags, s_text =
+      (String.to_seq expected, String.to_seq input)
+    in
+    Util.interleave s_tags s_text |> String.of_seq
+  in
   name >:: fun _ ->
-  assert_equal expected (Orender.char_tags_of_string_verbose input)
-    ~printer:(fun x -> x)
+  assert_equal expected_verbose
+    (Orender.char_tags_of_string_verbose input) ~printer:(fun x -> x)
 
 (* We use https://github.com/ocaml/ocaml/blob/trunk/stdlib/list.ml as
    sample code for most of our rendering tests. Any test with string
@@ -549,48 +553,38 @@ let rendering_tests =
   [
     render_test "OCaml List comment"
       "(* An alias for the type of lists. *)"
-      "S(S*O OAOnO OaOlOiOaOsO KfKoKrO OtOhOeO KtKyKpKeO KoKfO \
-       OlOiOsOtOsS.O S*S)";
+      "SSOOOOOOOOOOKKKOOOOOKKKKOKKOOOOOOSOSS";
     render_test "OCaml List type"
       "type 'a t = 'a list = [] | (::) of 'a * 'a list"
-      "KtKyKpKeO S'OaO OtO S=O S'OaO OlOiOsOtO S=O S[S]O S|O S(S:S:S)O \
-       KoKfO S'OaO S*O S'OaO OlOiOsOt";
+      "KKKKOSOOOOSOSOOOOOOOSOSSOSOSSSSOKKOSOOSOSOOOOOO";
     render_test "OCaml List length function"
       "let rec length_aux len = function [] -> len | _::l -> \
        length_aux (len + 1) l"
-      "KlKeKtO KrKeKcO OlOeOnOgOtOhS_OaOuOxO OlOeOnO S=O \
-       KfKuKnKcKtKiKoKnO S[S]O S-S>O OlOeOnO S|O S_S:S:OlO S-S>O \
-       OlOeOnOgOtOhS_OaOuOxO S(OlOeOnO S+O N1S)O Ol";
+      "KKKOKKKOOOOOOOSOOOOOOOOSOKKKKKKKKOSSOS^ \
+       SOOOOOSOSSSOOSSOOOOOOOSOOOOSOOOOSONSOO";
     render_test "OCaml List cons function" "let cons a l = a::l"
-      "KlKeKtO OcOoOnOsO OaO OlO S=O OaS:S:Ol";
+      "KKKOOOOOOOOOOSOOSSO";
     render_test "OCaml List nth function line 1" "let nth l n ="
-      "KlKeKtO OnOtOhO OlO OnO S=";
+      "KKKOOOOOOOOOS";
     render_test "OCaml List nth function line 2"
       {|  if n < 0 then invalid_arg "List.nth" else|}
-      "O O KiKfO OnO S<O N0O KtKhKeKnO OiOnOvOaOlOiOdS_OaOrOgO \
-       O\"OLOiOsOtS.OnOtOhO\"O KeKlKsKe";
+      "OOKKOOOSONOKKKKOOOOOOOOSOOOOOOOOOSOOOOOKKKK";
     render_test "OCaml List nth function line 3"
-      {|  let rec nth_aux l n =|}
-      "O O KlKeKtO KrKeKcO OnOtOhS_OaOuOxO OlO OnO S=";
+      {|  let rec nth_aux l n =|} "OOKKKOKKKOOOOSOOOOOOOOS";
     render_test "OCaml List nth function line 4" {|    match l with|}
-      "O O O O KmKaKtKcKhO OlO KwKiKtKh";
+      "OOOOKKKKKOOOKKKK";
     render_test "OCaml List nth function line 5"
-      {|    | [] -> failwith "nth"|}
-      "O O O O S|O S[S]O S-S>O OfOaOiOlOwOiOtOhO O\"OnOtOhO\"";
+      {|    | [] -> failwith "nth"|} "OOOOSOSSOSSOOOOOOOOOOOOOOO";
     render_test "OCaml List nth function line 6"
       {|    | a::l -> if n = 0 then a else nth_aux l (n-1)|}
-      "O O O O S|O OaS:S:OlO S-S>O KiKfO OnO S=O N0O KtKhKeKnO OaO \
-       KeKlKsKeO OnOtOhS_OaOuOxO OlO S(OnS-N1S)";
+      "OOOOSOOSSOOSSOKKOOOSONOKKKKOOOKKKKOOOOSOOOOOOSOSNS";
     render_test "OCaml List nth function line 7" {|  in nth_aux l n|}
-      "O O KiKnO OnOtOhS_OaOuOxO OlO On";
+      "OOKKOOOOSOOOOOOO";
     render_test "1-10 and random decimal numbers"
       "1 2 3 4 5 6 7 8 9 10 0.2871517527973204 -0.7263030123420913 \
        -0.019244505098450194 0.2501678809785825"
-      "N1O N2O N3O N4O N5O N6O N7O N8O N9O N1N0O \
-       N0N.N2N8N7N1N5N1N7N5N2N7N9N7N3N2N0N4O \
-       N-N0N.N7N2N6N3N0N3N0N1N2N3N4N2N0N9N1N3O \
-       N-N0N.N0N1N9N2N4N4N5N0N5N0N9N8N4N5N0N1N9N4O \
-       N0N.N2N5N0N1N6N7N8N8N0N9N7N8N5N8N2N5";
+      ("NONONONONONONONONONNONNNNNNNNNNNNNNNNNNONNNNN"
+     ^ "NNNNNNNNNNNNNNONNNNNNNNNNNNNNNNNNNNNONNNNNNNNNNNNNNNNNN");
     make_rendering_test "OCaml List comparison long comment";
     make_rendering_test "python float array with 50 elements";
   ]
