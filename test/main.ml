@@ -529,8 +529,23 @@ let render_test name input expected =
     ~printer:(fun x -> x)
 
 (* We use https://github.com/ocaml/ocaml/blob/trunk/stdlib/list.ml as
-   sample code for most of our rendering tests *)
+   sample code for most of our rendering tests. Any test with string
+   input that is longer than 10 lines after wrapping is made
+   data-driven. *)
 let rendering_tests =
+  let open Yojson.Basic.Util in
+  let path = "test/rendering_tests.json" in
+  let tests = Yojson.Basic.from_file path |> to_assoc in
+  let read_text_and_tag id =
+    let test = List.assoc id tests |> to_assoc in
+    let text = to_string (List.assoc "text" test) in
+    let tags = to_string (List.assoc "tags" test) in
+    (text, tags)
+  in
+  let make_rendering_test id =
+    let text, tags = read_text_and_tag id in
+    render_test id text tags
+  in
   [
     render_test "OCaml List comment"
       "(* An alias for the type of lists. *)"
@@ -568,22 +583,6 @@ let rendering_tests =
        KeKlKsKeO OnOtOhS_OaOuOxO OlO S(OnS-N1S)";
     render_test "OCaml List nth function line 7" {|  in nth_aux l n|}
       "O O KiKnO OnOtOhS_OaOuOxO OlO On";
-    render_test "OCaml List comparison long comment"
-      "(* Note: we are *not* shortcutting the list by using \
-       [List.compare_lengths] first; this may be slower on long lists \
-       immediately start with distinct elements. It is also incorrect \
-       for [compare] below, and it is better (principle of least \
-       surprise) to use the same approach for both functions. *)"
-      "S(S*O ONOoOtOeS:O OwOeO OaOrOeO S*OnOoOtS*O \
-       OsOhOoOrOtOcOuOtOtOiOnOgO OtOhOeO OlOiOsOtO ObOyO OuOsOiOnOgO \
-       S[OLOiOsOtS.OcOoOmOpOaOrOeS_OlOeOnOgOtOhOsS]O OfOiOrOsOtS;O \
-       OtOhOiOsO OmOaOyO ObOeO OsOlOoOwOeOrO OoOnO OlOoOnOgO \
-       OlOiOsOtOsO OiOmOmOeOdOiOaOtOeOlOyO OsOtOaOrOtO KwKiKtKhO \
-       OdOiOsOtOiOnOcOtO OeOlOeOmOeOnOtOsS.O OIOtO OiOsO OaOlOsOoO \
-       OiOnOcOoOrOrOeOcOtO KfKoKrO S[OcOoOmOpOaOrOeS]O ObOeOlOoOwS,O \
-       KaKnKdO OiOtO OiOsO ObOeOtOtOeOrO S(OpOrOiOnOcOiOpOlOeO KoKfO \
-       OlOeOaOsOtO OsOuOrOpOrOiOsOeS)O KtKoO OuOsOeO OtOhOeO OsOaOmOeO \
-       OaOpOpOrOoOaOcOhO KfKoKrO ObOoOtOhO OfOuOnOcOtOiOoOnOsS.O S*S)";
     render_test "1-10 and random decimal numbers"
       "1 2 3 4 5 6 7 8 9 10 0.2871517527973204 -0.7263030123420913 \
        -0.019244505098450194 0.2501678809785825"
@@ -592,57 +591,8 @@ let rendering_tests =
        N-N0N.N7N2N6N3N0N3N0N1N2N3N4N2N0N9N1N3O \
        N-N0N.N0N1N9N2N4N4N5N0N5N0N9N8N4N5N0N1N9N4O \
        N0N.N2N5N0N1N6N7N8N8N0N9N7N8N5N8N2N5";
-    render_test "python float array with 50 elements"
-      "array([ 0.38758848,  0.02545175, -0.27866952, -0.15696317, \
-       -1.0021448 ,\n\
-      \        0.14710676,  0.55861375, -1.27055305, -0.45388927,  \
-       0.58829975,\n\
-      \       -0.2781081 ,  1.47049902,  0.72041451, -0.35261133, \
-       -1.08957482,\n\
-      \        0.63800226, -1.89433254, -0.02725236,  0.1197188 , \
-       -0.02507692,\n\
-      \       -0.36778606, -0.50465987, -1.57201766, -0.44084905,  \
-       0.8125005 ,\n\
-      \        1.02582686,  1.09046691,  1.13310522, -0.09720492, \
-       -1.51662344,\n\
-      \        0.92278023,  0.64809181,  0.92832483,  0.90741031,  \
-       0.99969728,\n\
-      \       -0.17410895,  1.20512911, -0.14561397,  0.30256571, \
-       -1.29425083,\n\
-      \        0.1684995 , -0.62846886, -0.80046916,  0.22361884, \
-       -1.85172568,\n\
-      \        0.51293315, -0.77500675,  0.31978637,  1.11771287, \
-       -0.30027837])"
-      "OaOrOrOaOyS(S[O N0S.N3N8N7N5N8N8N4N8S,O O \
-       N0S.N0N2N5N4N5N1N7N5S,O S-N0S.N2N7N8N6N6N9N5N2S,O \
-       S-N0S.N1N5N6N9N6N3N1N7S,O N-N1N.N0N0N2N1N4N4N8O S,S\n\
-       O O O O O O O O N0S.N1N4N7N1N0N6N7N6S,O O \
-       N0S.N5N5N8N6N1N3N7N5S,O S-N1S.N2N7N0N5N5N3N0N5S,O \
-       S-N0S.N4N5N3N8N8N9N2N7S,O O N0S.N5N8N8N2N9N9N7N5S,O\n\
-       O O O O O O O N-N0N.N2N7N8N1N0N8N1O S,O O \
-       N1S.N4N7N0N4N9N9N0N2S,O O N0S.N7N2N0N4N1N4N5N1S,O \
-       S-N0S.N3N5N2N6N1N1N3N3S,O S-N1S.N0N8N9N5N7N4N8N2S,O\n\
-       O O O O O O O O N0S.N6N3N8N0N0N2N2N6S,O \
-       S-N1S.N8N9N4N3N3N2N5N4S,O S-N0S.N0N2N7N2N5N2N3N6S,O O \
-       N0N.N1N1N9N7N1N8N8O S,O S-N0S.N0N2N5N0N7N6N9N2S,O\n\
-       O O O O O O O S-N0S.N3N6N7N7N8N6N0N6S,O \
-       S-N0S.N5N0N4N6N5N9N8N7S,O S-N1S.N5N7N2N0N1N7N6N6S,O \
-       S-N0S.N4N4N0N8N4N9N0N5S,O O N0N.N8N1N2N5N0N0N5O S,S\n\
-       O O O O O O O O N1S.N0N2N5N8N2N6N8N6S,O O \
-       N1S.N0N9N0N4N6N6N9N1S,O O N1S.N1N3N3N1N0N5N2N2S,O \
-       S-N0S.N0N9N7N2N0N4N9N2S,O S-N1S.N5N1N6N6N2N3N4N4S,O\n\
-       O O O O O O O O N0S.N9N2N2N7N8N0N2N3S,O O \
-       N0S.N6N4N8N0N9N1N8N1S,O O N0S.N9N2N8N3N2N4N8N3S,O O \
-       N0S.N9N0N7N4N1N0N3N1S,O O N0S.N9N9N9N6N9N7N2N8S,O\n\
-       O O O O O O O S-N0S.N1N7N4N1N0N8N9N5S,O O \
-       N1S.N2N0N5N1N2N9N1N1S,O S-N0S.N1N4N5N6N1N3N9N7S,O O \
-       N0S.N3N0N2N5N6N5N7N1S,O S-N1S.N2N9N4N2N5N0N8N3S,O\n\
-       O O O O O O O O N0N.N1N6N8N4N9N9N5O S,O \
-       S-N0S.N6N2N8N4N6N8N8N6S,O S-N0S.N8N0N0N4N6N9N1N6S,O O \
-       N0S.N2N2N3N6N1N8N8N4S,O S-N1S.N8N5N1N7N2N5N6N8S,O\n\
-       O O O O O O O O N0S.N5N1N2N9N3N3N1N5S,O \
-       S-N0S.N7N7N5N0N0N6N7N5S,O O N0S.N3N1N9N7N8N6N3N7S,O O \
-       N1S.N1N1N7N7N1N2N8N7S,O S-N0S.N3N0N0N2N7N8N3N7S]S)";
+    make_rendering_test "OCaml List comparison long comment";
+    make_rendering_test "python float array with 50 elements";
   ]
 
 (** [split_test name input_str input_idx expected] creats an OUnit test
