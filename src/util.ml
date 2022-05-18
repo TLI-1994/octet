@@ -5,9 +5,9 @@
 
     Examples:
 
-    - [split_at_n "hello world" 5] is \["hello"; " world"\].
-    - [split_at_n "hello world" 0] is \[""; "hello world"\].
-    - [split_at_n "" 0] is \[""; ""\]. *)
+    - [split_at_n "hello world" 5] is [\["hello"; " world"\]].
+    - [split_at_n "hello world" 0] is [\[""; "hello world"\]].
+    - [split_at_n "" 0] is [\[""; ""\]]. *)
 let split_at_n s n =
   [ String.sub s 0 n; String.sub s n (String.length s - n) ]
 
@@ -19,8 +19,8 @@ let from i j =
   from_aux i j []
 
 (** from A4: [string_of_list printer lst] is a string representing
-    [lst], with elements separated by [";"] and enclosed in square
-    brackets. *)
+    [lst], with elements printed by [printer], separated by [";"], and
+    enclosed in square brackets. *)
 let string_of_list
     ?(open_delim = "[")
     ?(close_delim = "]")
@@ -83,8 +83,8 @@ let pad_to ((width, height) : int * int) contents =
     named so because it's like [List.map] but backwards. *)
 let pam x = List.map (fun f -> f x)
 
-(** [string_list_of_string s] returns a list consisting of strings of
-    each character of [s] in order
+(** [string_list_of_string s] is a list consisting of strings of each
+    character of [s] in order
 
     Examples:
 
@@ -97,8 +97,8 @@ let string_list_of_string s =
     []
     (from 0 (String.length s - 1))
 
-(** [string_of_string_list l] returns a string with all the elements of
-    [l] concatenated
+(** [string_of_string_list l] is a string with all the elements of [l]
+    concatenated
 
     Examples:
 
