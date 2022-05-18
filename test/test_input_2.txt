@@ -1,0 +1,2 @@
+The fantasy of mutability is that its easy to reason
+about: the machine does this, then this, etc.

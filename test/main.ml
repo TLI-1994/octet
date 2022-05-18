@@ -259,6 +259,13 @@ module type FILE_BUFFER_TEST_ENV = sig
       with label [name] that moves the cursor of [fb] according to the
       key [key], inserts the character [c], and checks that
       [buffer_contents fb] matches [expected]. *)
+
+  val mv_search_test :
+    string -> string -> char -> string list -> t -> test
+  (** [mv_search_test name target c expected fb] creates an OUnit test
+      case with label [name] that moves the cursor of [fb] by
+      [mv_search fb target], inserts the character [c], and checks that
+      [buffer_contents fb] matches [expected]. *)
 end
 
 module TestEnv_of_FileBuffer (Filebuffer : Obuffer.MUT_FILEBUFFER) :
@@ -309,6 +316,14 @@ module TestEnv_of_FileBuffer (Filebuffer : Obuffer.MUT_FILEBUFFER) :
     name >:: fun _ ->
     assert_equal expected
       (Filebuffer.update_on_key fb key |> ignore;
+       Filebuffer.update_on_key fb (`ASCII c, []) |> ignore;
+       Filebuffer.buffer_contents fb)
+      ~printer:(Util.string_of_list String.escaped)
+
+  let mv_search_test name target c expected fb =
+    name >:: fun _ ->
+    assert_equal expected
+      (Filebuffer.mv_search fb target |> ignore;
        Filebuffer.update_on_key fb (`ASCII c, []) |> ignore;
        Filebuffer.buffer_contents fb)
       ~printer:(Util.string_of_list String.escaped)
@@ -392,6 +407,31 @@ struct
           [ "acs c3110s  VWUEe" ];
       ]
 
+  let mv_search_tests =
+    Util.pam
+      (from_file "test/test_input_2.txt")
+      [
+        contents_test "read from input file"
+          [
+            "The fantasy of mutability is that its easy to reason";
+            "about: the machine does this, then this, etc.";
+            "";
+          ];
+        mv_search_test "search for string that does not exit" "cs3110"
+          '*'
+          [
+            "*The fantasy of mutability is that its easy to reason";
+            "about: the machine does this, then this, etc.";
+            "";
+          ];
+        mv_search_test "search for string that exits" "this" '*'
+          [
+            "*The fantasy of mutability is that its easy to reason";
+            "about: the machine does *this, then this, etc.";
+            "";
+          ];
+      ]
+
   let sequence_tests =
     Util.pam (Filebuffer.empty ())
       [
@@ -461,7 +501,8 @@ struct
           [ "abli"; ""; "jcf"; "otdpker"; "snmghq" ];
       ]
 
-  let tests = read_tests @ fancy_mv_tests @ sequence_tests
+  let tests =
+    read_tests @ fancy_mv_tests @ sequence_tests @ mv_search_tests
 end
 
 let buffer_tests =
