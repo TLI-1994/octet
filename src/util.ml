@@ -138,3 +138,18 @@ let search range target =
     0
     (String.length range - n);
   !ans
+
+(** from 2018 final exam: [interleave s1 s2] interleaves the two
+    sequences [s1] and [s2].
+
+    Examples:
+
+    - [interleave \[\[1;2;3\]\] \[\[4;5;6\]\] is \[\[1;2;3;4;5;6\]\]]
+    - [interleave \[1;2\] \[\[9;10;11;12\]\] is \[1;9;2;10;11;12\]]. *)
+let rec interleave (s1 : 'a Seq.t) (s2 : 'a Seq.t) : 'a Seq.t =
+ fun () ->
+  match (s1 (), s2 ()) with
+  | Seq.Cons (s1, t1), Seq.Cons (s2, t2) ->
+      Seq.Cons (s1, fun () -> Cons (s2, fun () -> interleave t1 t2 ()))
+  | Seq.Nil, s -> s
+  | s, Seq.Nil -> s

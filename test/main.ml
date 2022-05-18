@@ -520,9 +520,7 @@ let buffer_tests =
 
 (** [render_test name input expected] creates an OUnit test case which
     computes the tags of the characters in [char_tags_of_string input]
-    and checks that they match [expected]. The format for [expected] is
-    the characters of [input], each preceded by the first letter of the
-    category they belong to: [Keyword | Symbol | Number | Other]. *)
+    and checks that they match [expected]. *)
 let render_test name input expected =
   name >:: fun _ ->
   assert_equal expected (Orender.char_tags_of_string_verbose input)
@@ -544,7 +542,9 @@ let rendering_tests =
   in
   let make_rendering_test id =
     let text, tags = read_text_and_tag id in
-    render_test id text tags
+    render_test id text
+      (let s_tags, s_text = (String.to_seq tags, String.to_seq text) in
+       Util.interleave s_tags s_text |> String.of_seq)
   in
   [
     render_test "OCaml List comment"
