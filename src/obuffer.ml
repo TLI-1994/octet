@@ -25,4 +25,5 @@ module type MUT_FILEBUFFER = sig
   val ocaml_format : t -> t
   val update_on_key : t -> Notty.Unescape.key -> t
   val paste_from_clipboard : t -> t
+  val mv_search : t -> string -> t
 end

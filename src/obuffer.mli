@@ -66,4 +66,8 @@ module type MUT_FILEBUFFER = sig
   val paste_from_clipboard : t -> t
   (** [paste_from_clipboard buffer] is [buffer] with the contents from
       the system clipboard pasted to the cursor position. *)
+
+  val mv_search : t -> string -> t
+  (** [mv_search buffer s] is [buffer] with cursor moved to the next
+      appearance of [s]. *)
 end

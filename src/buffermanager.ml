@@ -80,6 +80,27 @@ module Make (FileBuffer : Obuffer.MUT_FILEBUFFER) = struct
 
   let remove_mb = function Hsplit (a, Minibuffer _) -> a | mb -> mb
 
+  let rec search s = function
+    | Hsplit (t1, t2) -> Hsplit (search s t1, search s t2)
+    | Vsplit (t1, t2) -> Vsplit (search s t1, search s t2)
+    | Leaf r ->
+        if r.active then
+          Leaf { r with buffer = FileBuffer.mv_search r.buffer s }
+        else Leaf r
+    | Minibuffer _ as m -> m
+
+  let rec minibuffer_off = function
+    | Hsplit (a, b) -> Hsplit (minibuffer_off a, turn_off b)
+    | Vsplit (a, b) -> Vsplit (minibuffer_off a, turn_off b)
+    | Minibuffer r -> Minibuffer { r with active = false }
+    | Leaf r -> Leaf { r with active = true }
+
+  and turn_off = function
+    | Hsplit (a, b) -> Hsplit (turn_off a, turn_off b)
+    | Vsplit (a, b) -> Vsplit (turn_off a, turn_off b)
+    | Minibuffer r -> Minibuffer { r with active = false }
+    | Leaf r -> Leaf { r with active = false }
+
   let perform_mb_command bm =
     let next =
       match get_mb_contents bm with
@@ -101,22 +122,11 @@ module Make (FileBuffer : Obuffer.MUT_FILEBUFFER) = struct
                 ( Vsplit
                     (remove_mb bm, s |> FileBuffer.from_file |> init),
                   empty_minibuffer )
+          | [ "search"; s ] -> search s (minibuffer_off bm)
           | _ -> bm
         end
     in
     clear_mb_contents next
-
-  let rec turn_off = function
-    | Hsplit (a, b) -> Hsplit (turn_off a, turn_off b)
-    | Vsplit (a, b) -> Vsplit (turn_off a, turn_off b)
-    | Minibuffer r -> Minibuffer { r with active = false }
-    | Leaf r -> Leaf { r with active = false }
-
-  let rec minibuffer_off = function
-    | Hsplit (a, b) -> Hsplit (minibuffer_off a, turn_off b)
-    | Vsplit (a, b) -> Vsplit (minibuffer_off a, turn_off b)
-    | Minibuffer r -> Minibuffer { r with active = false }
-    | Leaf r -> Leaf { r with active = true }
 
   let rec toggle_focus bm : t =
     match bm with
