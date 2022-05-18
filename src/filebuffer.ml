@@ -220,7 +220,15 @@ struct
     |> List.map (fun s -> LineBuffer.make s 80)
     |> function
     | [] -> ans
-    | h :: t -> { ans with front = [ h ]; back = t; desc = file_name }
+    | h :: t ->
+        mv_to_begin
+          {
+            ans with
+            front = [ h ];
+            back = t;
+            desc = file_name;
+            cursor_pos = LineBuffer.content_size h;
+          }
 
   let write_to_file buffer =
     let out_channel = open_out buffer.desc in
