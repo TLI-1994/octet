@@ -9,11 +9,11 @@ opam switch octet
 
 Currently available key bindings:
 
-    M-f                 Move forward one word
-    M-b                 Move backward one word
     M-d                 Delete next word
     M-Backspace         Kill back to the beginning of a word
     
+    C-f                 Move forward one word
+    C-b                 Move backward one word
     C-e                 Move cursor to end of line
     C-a                 Move cursor to beginning of line
     C-n                 Autoformat current buffer
