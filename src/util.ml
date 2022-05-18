@@ -1,6 +1,6 @@
 (** Helper functions. *)
 
-(** [split_at_n s n] is the list of two elements where the first is the
+(** [split_at_n s n] is a list of two elements where the first is the
     first [n] characters of [s], the second is the remainder of [s].
 
     Examples:
@@ -43,11 +43,11 @@ let string_of_list
   add_string buf close_delim;
   contents buf
 
-(** [list_from_nth n lst] is lst but without the first n elements. *)
-let rec list_from_nth n lst =
+(** [drop n lst] is lst but without the first n elements. *)
+let rec drop n lst =
   match (n, lst) with
   | 0, _ -> lst
-  | n, _ :: t -> list_from_nth (n - 1) t
+  | n, _ :: t -> drop (n - 1) t
   | _, [] -> invalid_arg "too few elements"
 
 (** [read_file file_path] is a string containing the contents of
@@ -80,12 +80,8 @@ let pad_to ((width, height) : int * int) contents =
 (** [pam x \[f1; f2; ...; fn\]] applies functions [f1, f2, ..., fn] [x]
     and builds the list [f1 x; f2 x; ...; fn x].
 
-    named so because it's like [map] but it's backwards. *)
+    named so because it's like [List.map] but backwards. *)
 let pam x = List.map (fun f -> f x)
-
-(** [string_of_char c] returns a string consisting of only the character
-    [c]*)
-let string_of_char = String.make 1
 
 (** [string_list_of_string s] returns a list consisting of strings of
     each character of [s] in order
@@ -93,15 +89,13 @@ let string_of_char = String.make 1
     Examples:
 
     - [string_list_of_string ""] is \[\].
-    - [string_list_of_string "test" is \["t"; "e"; "s"; "t"\]]*)
-let rec string_list_of_string s =
-  match s with
-  | "" -> []
-  | s ->
-      String.get s 0 |> string_of_char |> fun x ->
-      x
-      :: (string_list_of_string @@ String.sub s 1
-         @@ (String.length s - 1))
+    - [string_list_of_string "test" is \["t"; "e"; "s"; "t"\]] *)
+let string_list_of_string s =
+  let l = String.length s in
+  List.fold_left
+    (fun acc i -> String.sub s (l - i - 1) 1 :: acc)
+    []
+    (from 0 (String.length s - 1))
 
 (** [string_of_string_list l] returns a string with all the elements of
     [l] concatenated
@@ -109,18 +103,22 @@ let rec string_list_of_string s =
     Examples:
 
     - [string_list_of_string \[\]] is "".
-    - [string_list_of_string \["t"; "e"; "s"; "t"\]] is "test"*)
-let string_of_string_list = List.fold_left ( ^ ) ""
+    - [string_list_of_string \["t"; "e"; "s"; "t"\]] is "test" *)
+let string_of_string_list lst =
+  let open Buffer in
+  let buf = create (List.length lst) in
+  List.iter (fun s -> add_string buf s) lst;
+  contents buf
 
 (** [log s] writes the current time and the message [s] to the file
-    ["./log"]. Will create a new log file if it does not exist.*)
+    ["./log"]. Will create a new log file if it does not exist. *)
 let log s =
-  let oc = open_out_gen [ Open_creat; Open_append ] 0o666 "log" in
-  Printf.fprintf oc "Time: %f\n" (Unix.gettimeofday ());
-  Printf.fprintf oc "Message: %s\n\n" s;
-  close_out oc
+  let out_chan = open_out_gen [ Open_creat; Open_append ] 0o666 "log" in
+  Printf.fprintf out_chan "Time: %f\n" (Unix.gettimeofday ());
+  Printf.fprintf out_chan "Message: %s\n\n" s;
+  close_out out_chan
 
-(** [iter_from f i j] behaves the same as
+(** [iter_rev_from f i j] behaves the same as
     [(from i j) |> List.rev |> List.iter f] *)
 let rec iter_rev_from f i j =
   if i > j then ()
@@ -129,13 +127,14 @@ let rec iter_rev_from f i j =
     iter_rev_from f i (j - 1)
   end
 
-(** [search short long] is a list of indices in [long] such that the
-    next [String.length short] characters match those of [short] *)
-let search long short =
-  let small = String.length short in
-  let large = String.length long in
+(** [search range target] is a list of indices in [range] such that the
+    next [String.length target] characters in [range] match those of
+    [target]. *)
+let search range target =
+  let n = String.length target in
   let ans = ref [] in
   iter_rev_from
-    (fun i -> if String.sub long i small = short then ans := i :: !ans)
-    0 (large - small);
+    (fun i -> if String.sub range i n = target then ans := i :: !ans)
+    0
+    (String.length range - n);
   !ans

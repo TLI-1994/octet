@@ -15,8 +15,8 @@ struct
       the line with the cursor are in [front], in reverse order; buffers
       for lines after the cursor are in [back]; [cursor_pos] and
       [cursor_pos_cache] track the horizontal position of the cursor
-      along the current and past lines. [desc] is the path to which file
-      buffer_contents will be written.
+      along the current and past lines, respectively. [desc] is the path
+      to which file buffer contents will be written.
 
       RI: [cursor_pos_cache >= cursor_pos]. [h <> \[\]]. no line buffers
       contain the character ['\n']. *)
@@ -112,7 +112,18 @@ struct
     end
     else fb
 
-  and forward_aux (modifier : t -> t) (fb : t) =
+  let at_end fb =
+    fb.cursor_pos = (List.hd fb.front |> LineBuffer.content_size)
+
+  let at_begin fb = fb.cursor_pos = 0
+
+  let on_space fb ~offset:os =
+    String.get
+      (List.hd fb.front |> LineBuffer.to_string)
+      (fb.cursor_pos + os)
+    = ' '
+
+  let rec forward_aux (modifier : t -> t) (fb : t) =
     if at_end fb then fb
     else if on_space fb ~offset:0 then begin
       update_while modifier fb (fun fb ->
@@ -124,7 +135,7 @@ struct
       update_while modifier fb (fun fb ->
           at_end fb |> not && on_space fb ~offset:0 |> not)
 
-  and backward_aux (modifier : t -> t) (fb : t) =
+  let rec backward_aux (modifier : t -> t) (fb : t) =
     if at_begin fb then fb
     else if on_space fb ~offset:~-1 then begin
       update_while modifier fb (fun fb ->
@@ -135,17 +146,6 @@ struct
     else
       update_while modifier fb (fun fb ->
           at_begin fb |> not && on_space fb ~offset:~-1 |> not)
-
-  and at_end fb =
-    fb.cursor_pos = (List.hd fb.front |> LineBuffer.content_size)
-
-  and at_begin fb = fb.cursor_pos = 0
-
-  and on_space fb ~offset:os =
-    String.get
-      (List.hd fb.front |> LineBuffer.to_string)
-      (fb.cursor_pos + os)
-    = ' '
 
   let forward_word = forward_aux mv_right
   let backward_word = backward_aux mv_left
@@ -166,23 +166,23 @@ struct
 
   let mv_search fb short =
     let found = ref false in
-    List.iteri
-      (fun i line_buf ->
-        if !found = true then ()
-        else
-          let large = LineBuffer.to_string line_buf in
-          let res = Util.search large short in
-          match res with
-          | [] -> ()
-          | h :: _ ->
-              found := true;
-              Util.iter_rev_from (fun _ -> mv_down fb |> ignore) 0 i;
-              mv_to_begin fb |> ignore;
-              Util.iter_rev_from (fun _ -> mv_right fb |> ignore) 1 h)
-      fb.back;
+    let search_line i line_buf =
+      if !found = true then ()
+      else
+        let large = LineBuffer.to_string line_buf in
+        let res = Util.search large short in
+        match res with
+        | [] -> ()
+        | h :: _ ->
+            found := true;
+            Util.iter_rev_from (fun _ -> mv_down fb |> ignore) 0 i;
+            mv_to_begin fb |> ignore;
+            Util.iter_rev_from (fun _ -> mv_right fb |> ignore) 1 h
+    in
+    List.iteri search_line fb.back;
     fb
 
-  let rec delete fb =
+  let delete fb =
     begin
       match fb.front with
       | h1 :: h2 :: t when fb.cursor_pos = 0 ->
@@ -204,23 +204,30 @@ struct
     end;
     fb
 
-  and backward_kill fb = backward_aux delete fb
-  and forward_kill fb = forward_aux (fun fb -> mv_right fb |> delete) fb
+  let backward_kill fb = backward_aux delete fb
+  let forward_kill fb = forward_aux (fun fb -> mv_right fb |> delete) fb
 
   let buffer_contents fb =
-    List.rev_append fb.back fb.front (* line buffers in reverse order *)
+    List.rev_append fb.back fb.front
     |> List.rev_map LineBuffer.to_string
 
   let to_string fb = buffer_contents fb |> String.concat "\n"
 
   let from_file (file_name : string) =
-    let ans = empty () in
     Util.read_file file_name
     |> String.split_on_char '\n'
     |> List.map (fun s -> LineBuffer.make s 80)
     |> function
-    | [] -> ans
-    | h :: t -> { ans with front = [ h ]; back = t; desc = file_name }
+    | [] -> empty ()
+    | h :: t ->
+        {
+          (empty ()) with
+          front = [ h ];
+          back = t;
+          desc = file_name;
+          cursor_pos = LineBuffer.content_size h;
+        }
+        |> mv_to_begin
 
   let write_to_file buffer =
     let out_channel = open_out buffer.desc in
@@ -237,7 +244,13 @@ struct
     Sys.command ("rm " ^ temp_path) |> ignore;
     { new_buffer with desc = fb.desc }
 
-  let rec paste_from_clipboard (buffer : t) =
+  let rec insert_stream (buffer : t) (lst : char list) =
+    match lst with
+    | [] -> buffer
+    | '\n' :: t -> insert_stream (insert_newline buffer) t
+    | h :: t -> insert_stream (insert_char buffer h) t
+
+  let paste_from_clipboard (buffer : t) =
     let temp_path = "data/_temp.clipboard" in
     Sys.command ("rm -rf " ^ temp_path) |> ignore;
     Sys.command ("touch " ^ temp_path) |> ignore;
@@ -250,12 +263,6 @@ struct
     in
     Sys.command ("rm " ^ temp_path) |> ignore;
     insert_stream buffer clst
-
-  and insert_stream (buffer : t) (lst : char list) =
-    match lst with
-    | [] -> buffer
-    | '\n' :: t -> insert_stream (insert_newline buffer) t
-    | h :: t -> insert_stream (insert_char buffer h) t
 
   let mv_cursor (buffer : t) direxn =
     match direxn with
@@ -278,14 +285,10 @@ struct
   let modeline_to_image (buffer : t) (width : int) =
     I.string
       A.(fg black ++ bg white)
-      (buffer.desc ^ "  Cursor Line: "
-      ^ string_of_int buffer.cursor_line
-      ^ "  Col: "
-      ^ string_of_int buffer.cursor_pos
-      ^ " Mark Line: "
-      ^ string_of_int buffer.mark_line
-      ^ "  Col: "
-      ^ string_of_int buffer.mark_pos)
+      (Printf.sprintf
+         "%s  Cursor Line: %d  Col: %d Mark Line: %d  Col: %d"
+         buffer.desc buffer.cursor_line buffer.cursor_pos
+         buffer.mark_line buffer.mark_pos)
     </> I.char A.(fg black ++ bg white) ' ' width 1
 
   let get_cursor_opt buffer show_cursor line_num =
@@ -326,12 +329,7 @@ struct
     else if !min + amt > curr then ()
     else min := curr - amt + 1
 
-  let to_image
-      (buffer : t)
-      (top_line : int ref)
-      (left_pos : int ref)
-      ((w, h) : int * int)
-      (show_cursor : bool) =
+  let to_image buffer top_line left_pos (w, h) show_cursor =
     let visual_h = h - 1 in
     let visual_w = w - 5 in
     update_bounds buffer.cursor_line top_line visual_h;
@@ -341,7 +339,7 @@ struct
     let editor_img =
       buffer_contents buffer
       |> Util.pad_to (visual_w, visual_h)
-      |> Util.list_from_nth !top_line
+      |> Util.drop !top_line
       |> List.mapi (fun i ->
              let i = i + !top_line in
              Orender.image_of_string
@@ -360,8 +358,7 @@ struct
     | `ASCII 'B', [ `Ctrl ] -> backward_word buffer
     | `ASCII 'E', [ `Ctrl ] -> mv_to_end buffer
     | `ASCII 'A', [ `Ctrl ] -> mv_to_begin buffer
-    | `ASCII 'S', [ `Ctrl ] -> mv_search buffer "abc"
-    | `Backspace, [ `Meta ] -> backward_kill buffer
+    | (`Backspace | `Delete), [ `Meta ] -> backward_kill buffer
     | `ASCII 'd', [ `Meta ] -> forward_kill buffer
     | `ASCII ch, _ -> insert_char buffer ch
     | `Backspace, _ | `Delete, _ -> delete buffer

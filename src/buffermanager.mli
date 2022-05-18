@@ -8,6 +8,7 @@ module type BUFFER_MANAGER = sig
   (** representation type of the underlying buffer *)
 
   val empty_minibuffer : t
+  (** an empty minibuffer *)
 
   val init : u -> t
   (** initialize a buffermanager with a single buffer *)
@@ -34,17 +35,18 @@ module type BUFFER_MANAGER = sig
   (** write all buffer contents to files *)
 
   val paste_from_clipboard : t -> t
-  (* val paste_from_clipboard : t -> t *)
+  (* paste the contents of the clipboard into all active buffers *)
 
   val ( <-> ) : t -> t -> t
   (** vertically stack buffers *)
 
   val ( <|> ) : t -> t -> t
-  (*** horizontally stack buffers *)
+  (** horizontally stack buffers *)
 
   val to_image : int * int -> t -> Notty.image
   (** convert to image *)
 end
 
+(** creates a buffer manager, given a buffer for file contents. *)
 module Make : functor (FileBuffer : Obuffer.MUT_FILEBUFFER) ->
   BUFFER_MANAGER with type u = FileBuffer.t

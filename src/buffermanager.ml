@@ -1,6 +1,5 @@
 open Notty
 
-(** todo: rethink rep type--maybe lists for each split? *)
 module type BUFFER_MANAGER = sig
   type t
   type u
@@ -44,7 +43,6 @@ module Make (FileBuffer : Obuffer.MUT_FILEBUFFER) = struct
     | Minibuffer _ -> ()
     | Leaf r -> FileBuffer.write_to_file r.buffer
 
-  (** todo: rethink when the minibuffer gets added *)
   let empty_minibuffer =
     Minibuffer { buffer = FileBuffer.empty (); active = false }
 
@@ -89,17 +87,17 @@ module Make (FileBuffer : Obuffer.MUT_FILEBUFFER) = struct
         else Leaf r
     | Minibuffer _ as m -> m
 
+  let rec turn_off = function
+    | Hsplit (a, b) -> Hsplit (turn_off a, turn_off b)
+    | Vsplit (a, b) -> Vsplit (turn_off a, turn_off b)
+    | Minibuffer r -> Minibuffer { r with active = false }
+    | Leaf r -> Leaf { r with active = false }
+
   let rec minibuffer_off = function
     | Hsplit (a, b) -> Hsplit (minibuffer_off a, turn_off b)
     | Vsplit (a, b) -> Vsplit (minibuffer_off a, turn_off b)
     | Minibuffer r -> Minibuffer { r with active = false }
     | Leaf r -> Leaf { r with active = true }
-
-  and turn_off = function
-    | Hsplit (a, b) -> Hsplit (turn_off a, turn_off b)
-    | Vsplit (a, b) -> Vsplit (turn_off a, turn_off b)
-    | Minibuffer r -> Minibuffer { r with active = false }
-    | Leaf r -> Leaf { r with active = false }
 
   let perform_mb_command bm =
     let next =

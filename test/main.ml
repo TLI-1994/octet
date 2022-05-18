@@ -8,9 +8,10 @@ open Octet
    functorized, minimizing code duplication and testing multiple
    implementations of the same interface, some of which provide
    amortized or worst-case performance gains over earlier versions.
-   Although much of our functionality is implemented in helper functions
-   which are not exposed, we are able to test them anyway by creating
-   Notty keystrokes and passing them into [update_on_key].
+   Although much of our functionality for editing files is implemented
+   in helper functions which are not exposed, we are able to test them
+   anyway by creating values for Notty keystrokes and passing them into
+   [update_on_key].
 
    We manually tested the rendering code (creating terminal images and
    syntax highlighting) and the integration of the entire system, but
@@ -19,10 +20,6 @@ open Octet
 
 module type Tests = sig
   val tests : test list
-end
-
-module type String = sig
-  val x : string
 end
 
 module type MUT_BUFFER_TEST_ENV = sig
@@ -34,23 +31,23 @@ module type MUT_BUFFER_TEST_ENV = sig
 
   val insert_buffer_test : string -> char -> string -> t -> test
   (** [insert_buffer_test name c expected buf] creates an OUnit test
-      with label [name] which inserts [c] into [buf] and checks that the
-      contents match [expected] *)
+      with label [name] which inserts [c] into [buf] and then checks
+      that the contents match [expected] *)
 
   val left_buffer_test : string -> string -> t -> OUnitTest.test
   (** [left_buffer_test name expected buf] creates an OUnit test with
-      label [name] which moves the cursor of [buf] to the left and
+      label [name] which moves the cursor of [buf] to the left and then
       checks that the contents match [expected] *)
 
   val right_buffer_test : string -> string -> t -> OUnitTest.test
   (** [right_buffer_test name expected buf] creates an OUnit test with
-      label [name] which moves the cursor of [buf] to the right and
+      label [name] which moves the cursor of [buf] to the right and then
       checks that the contents match [expected] *)
 
   val delete_buffer_test : string -> string -> t -> OUnitTest.test
   (** [delete_buffer_test name expected buf] creates an OUnit test with
       label [name] which deletes the character at the cursor of [buf] to
-      and checks that the contents match [expected] *)
+      and then checks that the contents match [expected] *)
 
   (** operations that can be done in a series of tests *)
   type buffer_op =
@@ -221,31 +218,6 @@ module Buffer_Tests (Buffer : Obuffer.MUT_BUFFER) : Tests = struct
   let tests = List.flatten [ basic_tests; sequence_test ]
 end
 
-module UtilTests : Tests = struct
-  open Util
-
-  let split_test
-      (name : string)
-      (input_line : string)
-      (i : int)
-      (expected_output : string list) : test =
-    name >:: fun _ ->
-    assert_equal expected_output
-      (split_at_n input_line i)
-      ~printer:(string_of_list String.escaped)
-
-  let tests =
-    [
-      split_test "split in middle of string" "hello world" 5
-        [ "hello"; " world" ];
-      split_test "split at beginning of string" "hello world" 0
-        [ ""; "hello world" ];
-      split_test "split at end of string" "hello world" 11
-        [ "hello world"; "" ];
-      split_test "split empty string" "" 0 [ ""; "" ];
-    ]
-end
-
 module type FILE_BUFFER_TEST_ENV = sig
   include Obuffer.MUT_FILEBUFFER
 
@@ -278,11 +250,15 @@ module type FILE_BUFFER_TEST_ENV = sig
     test
   (** [mv_insert_test name dir c n expected fb] creates an OUnit test
       with label [name] to move in the direction [dir] [n] times, and
-      then insert [c] and check that the [buffer_contents fb] matches
+      then insert [c] and check that [buffer_contents fb] matches
       [expected]. *)
 
   val fancy_mv_test :
     string -> Notty.Unescape.key -> char -> string list -> t -> test
+  (** [fancy_mv_test name key c expected fb] creates an OUnit test case
+      with label [name] that moves the cursor of [fb] according to the
+      key [key], inserts the character [c], and checks that
+      [buffer_contents fb] matches [expected]. *)
 end
 
 module TestEnv_of_FileBuffer (Filebuffer : Obuffer.MUT_FILEBUFFER) :
@@ -501,13 +477,18 @@ let buffer_tests =
          N.tests @ N'.tests)
   |> List.flatten
 
+(** [render_test name input expected] creates an OUnit test case which
+    computes the tags of the characters in [char_tags_of_string input]
+    and checks that they match [expected]. The format for [expected] is
+    the characters of [input], each preceded by the first letter of the
+    category they belong to: [Keyword | Symbol | Number | Other]. *)
 let render_test name input expected =
   name >:: fun _ ->
-  assert_equal expected (Orender.char_tags_of_string_debug input)
+  assert_equal expected (Orender.char_tags_of_string_verbose input)
     ~printer:(fun x -> x)
 
 (* We use https://github.com/ocaml/ocaml/blob/trunk/stdlib/list.ml as
-   sample code for most of our rendering tests*)
+   sample code for most of our rendering tests *)
 let rendering_tests =
   [
     render_test "OCaml List comment"
@@ -623,8 +604,33 @@ let rendering_tests =
        N1S.N1N1N7N7N1N2N8N7S,O S-N0S.N3N0N0N2N7N8N3N7S]S)";
   ]
 
+(** [split_test name input_str input_idx expected] creats an OUnit test
+    case to check that [split_at_n input_str input_idx] matches
+    [expected]. *)
+let split_test
+    (name : string)
+    (input_line : string)
+    (i : int)
+    (expected_output : string list) : test =
+  let open Util in
+  name >:: fun _ ->
+  assert_equal expected_output
+    (split_at_n input_line i)
+    ~printer:(string_of_list String.escaped)
+
+let util_tests =
+  [
+    split_test "split in middle of string" "hello world" 5
+      [ "hello"; " world" ];
+    split_test "split at beginning of string" "hello world" 0
+      [ ""; "hello world" ];
+    split_test "split at end of string" "hello world" 11
+      [ "hello world"; "" ];
+    split_test "split empty string" "" 0 [ ""; "" ];
+  ]
+
 let tests =
   "test suite for project"
-  >::: List.flatten [ buffer_tests; rendering_tests ]
+  >::: List.flatten [ buffer_tests; rendering_tests; util_tests ]
 
 let _ = run_test_tt_main tests

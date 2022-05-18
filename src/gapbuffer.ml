@@ -5,8 +5,12 @@ type t = {
   mutable gap_right : int;
   mutable num_of_char : int;
 }
-(** RI: gap_left <= gap_right + 1. When the equality holds, the size of
-    the gap is 0. *)
+(** AF: A string is represented as a char array, with characters to the
+    left of the cursor starting from index [0] and characters to the
+    right of the cursor up to index [Array.length main_array - 1].
+
+    RI: [gap_left <= gap_right + 1]. When the equality holds, the size
+    of the gap is 0. *)
 
 let make str len =
   let num_of_char = String.length str in
@@ -22,7 +26,7 @@ let make str len =
 
 let to_string gb =
   let buf =
-    Buffer.create (gb.gap_len - (gb.gap_right - gb.gap_left + 1))
+    Buffer.create (gb.gap_len - gb.gap_right + gb.gap_left - 1)
   in
   for i = 0 to gb.gap_left - 1 do
     Buffer.add_char buf gb.main_array.(i)

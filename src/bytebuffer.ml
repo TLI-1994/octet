@@ -5,14 +5,15 @@ type t = {
   mutable r_pos : int;
 }
 (** AF: A string [s1 ^ s2] with the cursor between [s1] and [s2] is
-    represented if [s1] equals the string formed by the first [l_pos]
-    characters of [contents_L], and [s2] equals the string formed by the
-    characters after the first [r_pos] characters of [contents_R].
+    represented by [bf] if [s1] equals the string formed by the first
+    [bf.l_pos] characters of [bf.contents_L], and [s2] equals the string
+    formed by the characters after the first [bf.r_pos] characters of
+    [bf.contents_R].
 
     RI: [0 <= l_pos <= Bytes.length contents_L] and
     [0 <= r_pos <= Bytes.length contents_R ]. *)
 
-let debug = false
+let debug = true
 
 let check_ri buf =
   0 <= buf.l_pos

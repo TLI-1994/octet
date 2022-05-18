@@ -7,7 +7,7 @@
     "other": "white"
   },
   "highlight": {
-    "background": "red",
+    "background": "yellow",
     "keyword": "yellow",
     "symbol": "red",
     "number": "green",

@@ -131,17 +131,20 @@ let debug_aux l =
   | Number w -> [ "N"; w ]
   | Other w -> [ "O"; w ]
 
-let char_tags_of_string_debug s =
+let char_tags_of_string_verbose s =
   char_tags_of_string s |> List.map debug_aux |> List.flatten
   |> string_of_string_list
 
 let label_to_image mode label =
   let background = mode.bg in
-  match label with
-  | Keyword w -> I.string A.(fg mode.keyword ++ bg background) w
-  | Symbol w -> I.string A.(fg mode.symbol ++ bg background) w
-  | Number w -> I.string A.(fg mode.number ++ bg background) w
-  | Other w -> I.string A.(fg mode.other ++ bg background) w
+  let color, word =
+    match label with
+    | Keyword w -> (mode.keyword, w)
+    | Symbol w -> (mode.symbol, w)
+    | Number w -> (mode.number, w)
+    | Other w -> (mode.other, w)
+  in
+  I.string A.(fg color ++ bg background) word
 
 let label_to_image_hl_cursor hl cursor label =
   if cursor then label_to_image color_config.cursor label
@@ -151,21 +154,17 @@ let label_to_image_hl_cursor hl cursor label =
 let image_of_string hl_opt cursor_opt s =
   let tagged = char_tags_of_string s in
   let imlist =
-    match (hl_opt, cursor_opt) with
-    | None, None ->
-        tagged |> List.map (label_to_image_hl_cursor false false)
-    | None, Some loc ->
+    match hl_opt with
+    | None ->
         tagged
         |> List.mapi (fun i ->
-               label_to_image_hl_cursor false (i == loc))
-    | Some (st, en), None ->
+               label_to_image_hl_cursor false (Some i = cursor_opt))
+    | Some (st, en) ->
         tagged
         |> List.mapi (fun i ->
-               label_to_image_hl_cursor (i >= st && i <= en) false)
-    | Some (st, en), Some loc ->
-        tagged
-        |> List.mapi (fun i ->
-               label_to_image_hl_cursor (i >= st && i <= en) (i == loc))
+               label_to_image_hl_cursor
+                 (i >= st && i <= en)
+                 (cursor_opt = Some i))
   in
   imlist |> I.hcat
 
@@ -183,7 +182,4 @@ let crop_to ((width, height) : int * int) img_lst =
          (fun img -> I.hcrop 0 (I.width img - width) img)
          img_lst)
   in
-  let heightcropped =
-    I.vcrop 0 (I.height widthcropped - height) widthcropped
-  in
-  heightcropped
+  I.vcrop 0 (I.height widthcropped - height) widthcropped
