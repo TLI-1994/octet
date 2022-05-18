@@ -560,8 +560,8 @@ let rendering_tests =
     render_test "OCaml List length function"
       "let rec length_aux len = function [] -> len | _::l -> \
        length_aux (len + 1) l"
-      "KKKOKKKOOOOOOOSOOOOOOOOSOKKKKKKKKOSSOS^ \
-       SOOOOOSOSSSOOSSOOOOOOOSOOOOSOOOOSONSOO";
+      ("KKKOKKKOOOOOOOSOOOOOOOOSOKKKKKKKKOSSOSSOOOOOSOSSSOOSS"
+     ^ "OOOOOOOSOOOOSOOOOSONSOO");
     render_test "OCaml List cons function" "let cons a l = a::l"
       "KKKOOOOOOOOOOSOOSSO";
     render_test "OCaml List nth function line 1" "let nth l n ="
